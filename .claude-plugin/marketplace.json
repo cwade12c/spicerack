@@ -1,0 +1,32 @@
+{
+  "name": "spicerack",
+  "description": "Agent skills, subagents, MCP configs, and extensions by cwade12c. Take the one or two you want.",
+  "owner": {
+    "name": "Wade",
+    "url": "https://github.com/cwade12c"
+  },
+  "plugins": [
+    {
+      "name": "harvest",
+      "source": "./skills/harvest",
+      "description": "Turn a huge fork or branch diff into a ledger of features you can read, question, and pick from, then land the picks upstream by cherry-pick, rework, or rebuild.",
+      "version": "0.1.1",
+      "author": {
+        "name": "Wade",
+        "url": "https://github.com/cwade12c"
+      },
+      "homepage": "https://github.com/cwade12c/spicerack/tree/main/skills/harvest",
+      "repository": "https://github.com/cwade12c/spicerack",
+      "license": "MIT",
+      "keywords": [
+        "git",
+        "fork",
+        "upstream",
+        "code-review",
+        "diff",
+        "cherry-pick"
+      ],
+      "category": "git"
+    }
+  ]
+}
