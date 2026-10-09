@@ -540,7 +540,7 @@ details.peek pre{max-height:220px;overflow:auto;margin:8px 0 0;padding:10px 12px
     <div class="saved" id="saved"></div>
     <button class="ibtn hide-sm" data-act="help" title="Keyboard shortcuts (?)" aria-label="Keyboard shortcuts"><svg class="i" viewBox="0 0 16 16"><rect x="1.5" y="4" width="13" height="8.5" rx="1.5"/><path d="M4 6.5h.01M6.5 6.5h.01M9 6.5h.01M11.5 6.5h.01M5 10h6"/></svg></button>
     <button class="ibtn" data-act="menu" title="More" aria-label="More options" aria-haspopup="menu"><svg class="i" viewBox="0 0 16 16"><path d="M3.5 8h.01M8 8h.01M12.5 8h.01" stroke-width="2.6"/></svg></button>
-    <button class="btn primary send" id="sendbtn" data-act="send" title="Send this round to Claude (S)"><svg class="i" viewBox="0 0 16 16"><path d="M14 2 7 9M14 2l-4.5 12L7 9 2 6.5z"/></svg><span class="lbl">Send to Claude</span></button>
+    <button class="btn primary send" id="sendbtn" data-act="send" title="Finish this round and copy it for the agent (S)"><svg class="i" viewBox="0 0 16 16"><path d="M14 2 7 9M14 2l-4.5 12L7 9 2 6.5z"/></svg><span class="lbl">Finish round</span></button>
   </header>
   <div class="notices" id="notices"></div>
   <main>
@@ -609,7 +609,7 @@ const IC = {
   sun: '<circle cx="8" cy="8" r="3"/><path d="M8 1.5v1.5M8 13v1.5M1.5 8H3M13 8h1.5M3.4 3.4l1 1M11.6 11.6l1 1M3.4 12.6l1-1M11.6 4.4l1-1"/>',
   info: '<circle cx="8" cy="8" r="6"/><path d="M8 7.2v3.8M8 5v.01"/>',
   spark: '<path d="M8 1.8v3M8 11.2v3M1.8 8h3M11.2 8h3M3.6 3.6l2 2M10.4 10.4l2 2M3.6 12.4l2-2M10.4 5.6l2-2"/>',
-  claude: '<path d="M8 2v12M2 8h12M3.8 3.8l8.4 8.4M12.2 3.8l-8.4 8.4"/>',
+  agent: '<path d="M8 2v12M2 8h12M3.8 3.8l8.4 8.4M12.2 3.8l-8.4 8.4"/>',
   link: '<path d="M6.5 9.5 9.5 6.5"/><path d="M7 4.5 8.5 3a2.5 2.5 0 0 1 3.5 3.5L10.5 8M9 11.5 7.5 13A2.5 2.5 0 0 1 4 9.5L5.5 8"/>',
   undo: '<path d="M5.5 3.5 2.5 6.5l3 3"/><path d="M2.5 6.5h7a4 4 0 0 1 0 8H7"/>'
 };
@@ -795,7 +795,7 @@ async function fsaPick() {
     ui.fsa.handle = h; ui.fsa.state = 'on';
     try { await idb.set(KEY, h); } catch (e) {}
     await fsaWrite();
-    toast('Keeping ' + h.name + ' in sync. Tell Claude where it is.');
+    toast('Keeping ' + h.name + ' in sync. Tell the agent where it is.');
   } catch (err) { if (err.name !== 'AbortError') ui.fsa.err = String(err.message || err); }
   renderSaved();
 }
@@ -920,7 +920,7 @@ function renderRoundNote() {
   const pend = Object.values(PENDING).flat().filter(p => !p.answer).length;
   let h = '';
   if (M.round > 1 && fresh && !ui.dismissed['answers-r' + M.round]) {
-    h = '<div class="roundnote">' + ic('spark', 'spark') + '<span>Claude answered <b>' + plural(fresh, 'question') + '</b> from round ' + M.ingested_round + '</span>'
+    h = '<div class="roundnote">' + ic('spark', 'spark') + '<span><b>' + plural(fresh, 'answer') + '</b> from round ' + M.ingested_round + '</span>'
       + '<button data-act="filter" data-f="answers">' + (ui.filter === 'answers' ? 'Show all' : 'Read them' + (un ? ' (' + un + ' new)' : '')) + '</button></div>';
   }
   if (pend) h += '<div class="roundnote" style="background:var(--surface-2);border-color:var(--line-2)">' + ic('info') + '<span>' + plural(pend, 'question') + ' from round ' + (M.round - 1) + ' not answered in the ledger yet</span></div>';
@@ -933,7 +933,7 @@ function rowHTML(e, W, rel) {
   const fresh = unseen(e).length;
   const s = stateOf(e);
   let flags = '';
-  if (fresh) flags += '<i class="newdot" title="New answer from Claude"></i>';
+  if (fresh) flags += '<i class="newdot" title="New answer"></i>';
   if (unresolved.length) flags += '<span class="w" title="Needs ' + unresolved.map(w => w.dep).join(', ') + '">' + ic('warn') + '</span>';
   if (nC) flags += '<span class="q" title="' + plural(nC, 'comment') + ' this round">' + ic('chat') + nC + '</span>';
   if (decidable(e) && isChanged(e)) flags += '<i class="ed" title="Changed from the ledger this round"></i>';
@@ -985,7 +985,7 @@ function resolveHTML(e, W) {
     if (w.cut && !open) {
       h += '<div class="resolve cut"><h4>' + ic('scissors') + 'Cut: ' + esc(e.id) + ' lands without ' + esc(w.dep) + '</h4>'
         + '<p class="cuttext">“' + esc(w.cut) + '”</p>'
-        // A cut already in the ledger changes by asking Claude, not here: the responses file only carries new cuts.
+        // A cut already in the ledger changes by asking the agent, not here: the responses file only carries new cuts.
         + (w.ledgerCut ? '<p class="muted">From the ledger. To change it, ask a question on this entry.</p>' : '<div class="acts"><button class="btn sm" data-act="cutedit" data-id="' + e.id + '" data-dep="' + w.dep + '">Edit</button><button class="btn sm ghost" data-act="cutclear" data-id="' + e.id + '" data-dep="' + w.dep + '">Remove cut</button></div>') + '</div>';
       return;
     }
@@ -1013,8 +1013,8 @@ function threadHTML(e) {
   e.notes.forEach(n => {
     if (n.kind === 'question') {
       items.push('<div class="msg"><div class="av you">You</div><div><div class="mh"><b>You asked</b><span class="meta">' + esc(n.date || '') + (n.qid ? ' · ' + esc(n.qid) : '') + '</span></div><div class="mb">' + fmt(n.text) + '</div>'
-        + (n.answer ? '<div class="msg answer reply' + (freshQ.has(n.qid) ? ' fresh' : '') + '" style="margin-top:10px"><div class="av ai">' + ic('claude') + '</div><div><div class="mh"><b>Claude</b>' + (freshAnswers(e).includes(n) ? '<span class="tag new">' + (freshQ.has(n.qid) ? 'New' : 'Round ' + M.ingested_round) + '</span>' : '') + '</div><div class="mb">' + fmt(n.answer) + '</div></div></div>'
-                    : '<div class="msg wait reply"><div class="av ai">' + ic('claude') + '</div><div class="mb">No answer recorded in the ledger.</div></div>')
+        + (n.answer ? '<div class="msg answer reply' + (freshQ.has(n.qid) ? ' fresh' : '') + '" style="margin-top:10px"><div class="av ai">' + ic('agent') + '</div><div><div class="mh"><b>Answer</b>' + (freshAnswers(e).includes(n) ? '<span class="tag new">' + (freshQ.has(n.qid) ? 'New' : 'Round ' + M.ingested_round) + '</span>' : '') + '</div><div class="mb">' + fmt(n.answer) + '</div></div></div>'
+                    : '<div class="msg wait reply"><div class="av ai">' + ic('agent') + '</div><div class="mb">No answer recorded in the ledger.</div></div>')
         + '</div></div>');
     } else if (n.kind === 'note') {
       items.push('<div class="msg"><div class="av you">You</div><div><div class="mh"><b>Your note</b><span class="meta">' + esc(n.date || '') + (n.qid ? ' · ' + esc(n.qid) : '') + '</span></div><div class="mb">' + fmt(n.text) + '</div></div></div>');
@@ -1024,8 +1024,8 @@ function threadHTML(e) {
   });
   if (e.notes_inline) items.push('<div class="msg"><div class="av led">' + ic('file') + '</div><div><div class="mh"><b>Ledger note</b></div><div class="mb">' + fmt(e.notes_inline) + '</div></div></div>');
   (PENDING[e.id] || []).forEach(p => items.push('<div class="msg"><div class="av you">You</div><div><div class="mh"><b>You asked</b><span class="meta">round ' + p.round + ' · ' + esc(p.id) + '</span></div><div class="mb">' + fmt(p.text) + '</div>'
-    + (p.answer ? '<div class="msg answer reply" style="margin-top:10px"><div class="av ai">' + ic('claude') + '</div><div><div class="mh"><b>Claude</b><span class="tag note">Not in ledger yet</span></div><div class="mb">' + fmt(p.answer) + '</div></div></div>'
-                : '<div class="msg wait reply"><div class="av ai">' + ic('claude') + '</div><div class="mb">Awaiting an answer: not in the ledger yet.</div></div>') + '</div></div>'));
+    + (p.answer ? '<div class="msg answer reply" style="margin-top:10px"><div class="av ai">' + ic('agent') + '</div><div><div class="mh"><b>Answer</b><span class="tag note">Not in ledger yet</span></div><div class="mb">' + fmt(p.answer) + '</div></div></div>'
+                : '<div class="msg wait reply"><div class="av ai">' + ic('agent') + '</div><div class="mb">Awaiting an answer: not in the ledger yet.</div></div>') + '</div></div>'));
   (st.comments || []).forEach(c => {
     const editing = ui.editing === c.id;
     items.push('<div class="msg mine"><div class="av you">You</div><div><div class="mh"><b>' + (c.kind === 'question' ? 'Question' : 'Note') + '</b><span class="tag ' + (c.kind === 'note' ? 'note' : 'draft') + '">' + (c.kind === 'note' ? 'Note · this round' : 'Draft · this round') + '</span><span class="meta">' + esc(c.id) + '</span>'
@@ -1036,8 +1036,8 @@ function threadHTML(e) {
   const n = items.length;
   return '<div class="sec" id="conv"><div class="sech">Questions and notes' + (n ? ' <span class="c">' + n + '</span>' : '') + '</div>'
     + (n ? '<div class="thread">' + items.join('') + '</div>' : '')
-    + '<div class="composer"><textarea data-k="c:' + e.id + '" rows="1" placeholder="Ask Claude about ' + esc(e.id) + ', or leave a note for landing…" aria-label="Question or note about ' + esc(e.id) + '">' + esc(ui.drafts[e.id] || '') + '</textarea>'
-    + '<div class="cbar"><span class="hint">Answered together when you send the round</span><span class="grow"></span>'
+    + '<div class="composer"><textarea data-k="c:' + e.id + '" rows="1" placeholder="Ask about ' + esc(e.id) + ', or leave a note for landing…" aria-label="Question or note about ' + esc(e.id) + '">' + esc(ui.drafts[e.id] || '') + '</textarea>'
+    + '<div class="cbar"><span class="hint">Answered together when you finish the round</span><span class="grow"></span>'
     + '<button class="btn sm ghost" data-act="addc" data-kind="note" data-id="' + e.id + '" title="Shift+' + MOD + '+Enter">Add note</button>'
     + '<button class="btn sm primary" data-act="addc" data-kind="question" data-id="' + e.id + '" title="' + MOD + '+Enter">Ask <kbd>' + MODK + '↵</kbd></button></div></div></div>';
 }
@@ -1240,7 +1240,7 @@ function renderInspector() {
 function renderPlan() {
   const t = tallies(), P = plan(), W = t.W;
   const pill = e => '<button class="pill" data-act="open" data-id="' + e.id + '"><span class="' + nodeCls(e, W) + '"></span><span class="rid">' + esc(e.id) + '</span><span class="t">' + esc(e.title) + '</span></button>';
-  let h = '<div class="planhead"><div style="flex:1;min-width:260px"><h2>Round ' + M.round + ' plan</h2><p>What Claude will do with your decisions. Nothing lands until you confirm in chat.</p></div>'
+  let h = '<div class="planhead"><div style="flex:1;min-width:260px"><h2>Round ' + M.round + ' plan</h2><p>What the agent will do with your decisions. Nothing lands until you confirm in chat.</p></div>'
     + '<div class="tally"><div class="t-p"><b>' + t.picked + '</b><span>picked</span></div><div><b>' + P.order.length + '</b><span>' + (P.order.length === 1 ? 'branch' : 'branches') + '</span></div><div><b>' + t.left + '</b><span>left</span></div><div><b>' + t.open + '</b><span>undecided</span></div><div><b>' + t.nq + '</b><span>' + (t.nq === 1 ? 'question' : 'questions') + '</span></div>' + (t.un.length ? '<div class="t-w"><b>' + t.un.length + '</b><span>to resolve</span></div>' : '') + '</div></div>';
   h += '<div class="plangrid"><div>';
   h += '<section class="panel"><h3>Landing order <span class="c">' + plural(P.order.length, 'branch', 'branches') + ', in dependency order</span></h3>';
@@ -1258,17 +1258,17 @@ function renderPlan() {
   h += '</section>';
   const left = E.filter(e => decidable(e) && eff(e).kind === 'left'), und = E.filter(e => decidable(e) && eff(e).kind === 'open');
   h += '<section class="panel"><h3>Left out <span class="c">' + left.length + '</span></h3>' + (left.length ? '<div class="pills">' + left.map(pill).join('') + '</div>' : '<p class="muted">Nothing left out.</p>') + '</section>';
-  h += '<section class="panel"><h3>Undecided <span class="c">' + und.length + '</span></h3>' + (und.length ? '<p class="muted" style="margin-bottom:10px">These stay open in the ledger. You can send now and decide later.</p><div class="pills">' + und.map(pill).join('') + '</div>' : '<p class="muted">Every entry has a decision.</p>') + '</section>';
+  h += '<section class="panel"><h3>Undecided <span class="c">' + und.length + '</span></h3>' + (und.length ? '<p class="muted" style="margin-bottom:10px">These stay open in the ledger. You can finish the round now and decide them later.</p><div class="pills">' + und.map(pill).join('') + '</div>' : '<p class="muted">Every entry has a decision.</p>') + '</section>';
   h += '</div><div>';
-  if (t.un.length) h += '<section class="panel attn"><h3>' + ic('warn') + 'Needs attention <span class="c">' + t.un.length + '</span></h3><div class="ilist">' + t.un.map(w => '<button class="iitem" data-act="open" data-id="' + w.from + '"><span class="rid">' + esc(w.from) + '</span><span>' + esc(byId[w.from].title) + '<span class="sub">needs ' + esc(w.dep) + ' · ' + esc(byId[w.dep].title) + ', which is ' + (w.state === 'open' ? 'undecided' : w.state) + '</span></span></button>').join('') + '</div><p class="muted" style="margin-top:10px">You can still send. Claude will ask how to cut each one.</p></section>';
+  if (t.un.length) h += '<section class="panel attn"><h3>' + ic('warn') + 'Needs attention <span class="c">' + t.un.length + '</span></h3><div class="ilist">' + t.un.map(w => '<button class="iitem" data-act="open" data-id="' + w.from + '"><span class="rid">' + esc(w.from) + '</span><span>' + esc(byId[w.from].title) + '<span class="sub">needs ' + esc(w.dep) + ' · ' + esc(byId[w.dep].title) + ', which is ' + (w.state === 'open' ? 'undecided' : w.state) + '</span></span></button>').join('') + '</div><p class="muted" style="margin-top:10px">You can still finish the round. The agent will ask how to cut each one.</p></section>';
   const qs = [], ns = [];
   E.forEach(e => ((S.entries[e.id] || {}).comments || []).forEach(c => (c.kind === 'question' ? qs : ns).push({e, c})));
   const citem = x => '<button class="iitem" data-act="open" data-id="' + x.e.id + '"><span class="rid">' + esc(x.e.id) + '</span><span>' + esc(x.c.text) + '<span class="sub">' + esc(x.e.title) + '</span></span></button>';
-  h += '<section class="panel"><h3>' + ic('chat') + 'Questions for Claude <span class="c">' + qs.length + '</span></h3>' + (qs.length ? '<div class="ilist">' + qs.map(citem).join('') + '</div>' : '<p class="muted">None yet. Ask from any entry; Claude answers them all in one pass.</p>') + '</section>';
+  h += '<section class="panel"><h3>' + ic('chat') + 'Your questions <span class="c">' + qs.length + '</span></h3>' + (qs.length ? '<div class="ilist">' + qs.map(citem).join('') + '</div>' : '<p class="muted">None yet. Ask from any entry; the agent answers them all in one pass.</p>') + '</section>';
   if (ns.length) h += '<section class="panel"><h3>Notes for landing <span class="c">' + ns.length + '</span></h3><div class="ilist">' + ns.map(citem).join('') + '</div></section>';
   h += '<section class="panel"><h3>General notes</h3><textarea class="tarea" id="general" data-k="general" rows="3" placeholder="Anything that is not about one entry: ordering preferences, things to check across features…">' + esc(S.general || '') + '</textarea></section>';
   h += '</div></div>';
-  h += '<div class="sendcta"><p><b>' + (t.touched ? 'Ready when you are.' : 'Nothing to send yet.') + '</b> <span>' + (t.touched ? 'Claude ingests this into the ledger, answers every question, then renders round ' + (M.round + 1) + '.' : 'Make a decision or ask a question first.') + '</span></p><button class="btn primary" data-act="send">' + ic('copy') + 'Send to Claude</button></div>';
+  h += '<div class="sendcta"><p><b>' + (t.touched ? 'Ready when you are.' : 'Nothing to hand back yet.') + '</b> <span>' + (t.touched ? 'The agent records this in the ledger, answers every question, then renders round ' + (M.round + 1) + '.' : 'Make a decision or ask a question first.') + '</span></p><button class="btn primary" data-act="send">' + ic('copy') + 'Finish round</button></div>';
   $('#plan').innerHTML = h;
   autosize($('#general'));
 }
@@ -1299,14 +1299,14 @@ const layerOpen = () => !!$('#layer').firstChild;
 function openSend() {
   const t = tallies(), P = plan();
   const copyText = handoffText(t);
-  let h = '<div class="dialog" role="dialog" aria-modal="true" aria-labelledby="sendh"><div class="dlgh"><div><h2 id="sendh">Send round ' + M.round + ' to Claude</h2><p>One paste hands over every decision and question. Claude answers them all at once.</p></div><button class="ibtn" data-act="closelayer" aria-label="Close">' + ic('close') + '</button></div><div class="dlgb">';
+  let h = '<div class="dialog" role="dialog" aria-modal="true" aria-labelledby="sendh"><div class="dlgh"><div><h2 id="sendh">Hand round ' + M.round + ' back</h2><p>Copy the round and paste it into the chat with your agent. One paste carries every decision and question, and the agent answers them all at once.</p></div><button class="ibtn" data-act="closelayer" aria-label="Close">' + ic('close') + '</button></div><div class="dlgb">';
   h += '<div class="sumrow"><span><b>' + t.picked + '</b> picked · ' + plural(P.order.length, 'branch', 'branches') + '</span><span><b>' + t.left + '</b> left</span><span><b>' + t.open + '</b> undecided</span><span><b>' + t.nq + '</b> ' + (t.nq === 1 ? 'question' : 'questions') + '</span>' + (t.nn ? '<span><b>' + t.nn + '</b> ' + (t.nn === 1 ? 'note' : 'notes') + '</span>' : '') + '</div>';
-  if (!t.touched) h += '<div class="callout">' + ic('info') + '<span>Nothing has changed from the ledger yet, so there is nothing to send. Mark an entry or ask a question first.</span></div>';
-  if (t.un.length) h += '<div class="callout w">' + ic('warn') + '<span>' + plural(t.un.length, 'pick needs', 'picks need') + ' an entry you did not pick (' + t.un.map(w => w.from + '→' + w.dep).join(', ') + '). Claude will ask how to cut ' + (t.un.length === 1 ? 'it' : 'them') + '.</span></div>';
+  if (!t.touched) h += '<div class="callout">' + ic('info') + '<span>Nothing has changed from the ledger yet, so there is nothing to hand back. Mark an entry or ask a question first.</span></div>';
+  if (t.un.length) h += '<div class="callout w">' + ic('warn') + '<span>' + plural(t.un.length, 'pick needs', 'picks need') + ' an entry you did not pick (' + t.un.map(w => w.from + '→' + w.dep).join(', ') + '). The agent will ask how to cut ' + (t.un.length === 1 ? 'it' : 'them') + '.</span></div>';
   if (t.open && t.touched) h += '<div class="callout">' + ic('info') + '<span>' + plural(t.open, 'entry stays', 'entries stay') + ' undecided. That is fine: they remain open for a later round.</span></div>';
-  h += '<button class="bigsend" data-act="copy"' + (t.touched ? '' : ' disabled style="opacity:.45;cursor:not-allowed"') + '>' + ic('copy') + '<span>Copy for Claude</span></button>'
-    + '<div class="steps"><div class="on" id="st1"><i>1</i><span>Copy your round</span></div><div id="st2"><i>2</i><span>Paste it into your Claude session</span></div><div><i>3</i><span>Claude answers and renders round ' + (M.round + 1) + '</span></div></div>'
-    + '<div class="alt"><p class="muted">Or hand it over as a file. Tell Claude where it is.</p><button class="btn sm" data-act="export">' + ic('download') + 'Download ' + fileName() + '</button>'
+  h += '<button class="bigsend" data-act="copy"' + (t.touched ? '' : ' disabled style="opacity:.45;cursor:not-allowed"') + '>' + ic('copy') + '<span>Copy responses</span></button>'
+    + '<div class="steps"><div class="on" id="st1"><i>1</i><span>Copy your round</span></div><div id="st2"><i>2</i><span>Paste it into the chat with your agent</span></div><div><i>3</i><span>The agent answers and renders round ' + (M.round + 1) + '</span></div></div>'
+    + '<div class="alt"><p class="muted">Or hand it over as a file. Tell the agent where it is.</p><button class="btn sm" data-act="export">' + ic('download') + 'Download ' + fileName() + '</button>'
     + (window.showSaveFilePicker ? '<button class="btn sm" data-act="fsa">' + ic('sync') + (ui.fsa.state === 'on' ? 'Syncing ' + esc(ui.fsa.handle.name) : 'Keep a file in sync…') + '</button>' : '') + '</div>'
     + '<details class="peek"><summary>Preview what gets sent (' + copyText.length.toLocaleString() + ' characters)</summary><pre>' + esc(copyText) + '</pre></details>';
   openLayer(h + '</div></div>');
@@ -1325,7 +1325,7 @@ async function copyResponses() {
   }
   const b = document.querySelector('.bigsend');
   if (ok) {
-    if (b) { b.classList.add('done'); b.innerHTML = ic('check') + '<span>Copied. Now paste it into your Claude session</span>'; }
+    if (b) { b.classList.add('done'); b.innerHTML = ic('check') + '<span>Copied. Now paste it into the chat with your agent</span>'; }
     const s2 = $('#st2'); if (s2) s2.classList.add('on');
     ui.copiedAt = Date.now();
     return;
@@ -1337,7 +1337,7 @@ function download() {
   const b = new Blob([respText()], {type: 'application/json'}), a = document.createElement('a');
   a.href = URL.createObjectURL(b); a.download = fileName(); document.body.appendChild(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
-  toast('Downloaded ' + fileName() + '. Tell Claude where it landed.');
+  toast('Downloaded ' + fileName() + '. Tell the agent where it landed.');
 }
 function openMenu() {
   const th = {auto: 'Match system', light: 'Light', dark: 'Dark'};
@@ -1355,8 +1355,8 @@ function openHelp() {
   openLayer('<div class="dialog" role="dialog" aria-modal="true" aria-labelledby="helph"><div class="dlgh"><div><h2 id="helph">Keyboard</h2><p>Review a whole ledger without touching the mouse.</p></div><button class="ibtn" data-act="closelayer" aria-label="Close">' + ic('close') + '</button></div><div class="dlgb"><div class="keys">'
     + '<h4>Move</h4>' + k(['J', '↓'], 'Next entry') + k(['K', '↑'], 'Previous entry') + k(['N'], 'Next undecided') + k(['/'], 'Filter the list')
     + '<h4>Decide</h4>' + k(['1'], 'Cherry-pick') + k(['2'], 'Rework') + k(['3'], 'Rebuild') + k(['X'], 'Leave') + k(['B'], 'Edit batch name') + k(['U', MODK.trim() + 'Z'], 'Undo')
-    + '<h4>Ask</h4>' + k(['C'], 'Write a question') + k([MODK.trim() + '↵'], 'Ask Claude') + k(['⇧' + MODK.trim() + '↵'], 'Add as a note') + k(['Esc'], 'Leave the text box')
-    + '<h4>Views</h4>' + k(['R'], 'Review') + k(['M'], 'Map') + k(['P'], 'Plan') + k(['S'], 'Send to Claude')
+    + '<h4>Ask</h4>' + k(['C'], 'Write a question') + k([MODK.trim() + '↵'], 'Ask') + k(['⇧' + MODK.trim() + '↵'], 'Add as a note') + k(['Esc'], 'Leave the text box')
+    + '<h4>Views</h4>' + k(['R'], 'Review') + k(['M'], 'Map') + k(['P'], 'Plan') + k(['S'], 'Finish round')
     + '</div><p class="muted" style="margin-top:14px">Press a mode again to clear it. Every change can be undone.</p></div></div>');
 }
 function confirmReset() {
@@ -1380,7 +1380,7 @@ function celebrate() {
     ps.forEach(p => { p.x += p.vx; p.y += p.vy; p.vy += .22; p.vx *= .985; p.r += .2; g.save(); g.translate(p.x, p.y); g.rotate(p.r); g.fillStyle = p.c; g.globalAlpha = Math.max(0, 1 - f / 80); g.fillRect(-p.s / 2, -1, p.s, 2); g.restore(); });
     if (++f < 80) requestAnimationFrame(tick); else c.remove();
   })();
-  toast('Every entry has a decision. Send it to Claude when you are ready.');
+  toast('Every entry has a decision. Finish the round when you are ready.');
 }
 
 // ---- refresh & navigation -----------------------------------------------------------------------

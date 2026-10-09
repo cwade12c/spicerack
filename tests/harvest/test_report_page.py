@@ -122,6 +122,8 @@ def run(p, name):
               {"F4": ["F3", "F1"], "F5": ["F4", "F3"], "F12": ["F11", "F10"], "F17": ["F3", "F2", "F7"]}.items()),
           "every dependency is listed before the entries that build on it")
     check(sel(page) == "F2", "opens on the first undecided entry (F2)")
+    check("Finish round" in page.inner_text("#sendbtn") and "Claude" not in page.content(),
+          "the page names no particular agent; the hand-back button says what it does")
     check("2/18 decided" in page.inner_text("#progress"), "progress starts from the ledger: 2/18 decided (F8 picked, F14 left)")
 
     t0 = time.perf_counter()
@@ -194,7 +196,7 @@ def run(p, name):
     if chromium:
         check(page.evaluate("navigator.clipboard.readText()") == clip, "the system clipboard holds the copied text")
     check(clip.startswith("Harvest responses, round 1 (origin-main.md): 7 picked, 3 left, 3 questions, 1 dependency to cut."),
-          "copied text starts with a one-line summary Claude can read")
+          "copied text starts with a one-line summary the agent can read")
     copied = json.loads(clip.split("```json\n", 1)[1].rsplit("\n```", 1)[0])
     shot(page, "04-send.png")
     with page.expect_download() as dl:
@@ -298,7 +300,7 @@ def run(p, name):
     watch(pg)
     pg.goto((out / "report-r2.html").as_uri())
     check("round 2" in pg.inner_text("#refs").lower(), "page says round 2")
-    check("Claude answered 3 questions from round 1" in pg.inner_text("#roundnote"), "round-2 banner: Claude answered 3 questions")
+    check("3 answers from round 1" in pg.inner_text("#roundnote"), "round-2 banner: 3 answers from round 1")
     check(sel(pg) == "F3", "opens on the first entry with a new answer (F3)")
     check(pg.locator(".tag.new").count() == 1, "the answer is marked New")
     check(responses(pg)["entries"] == {}, "nothing to send yet: marks now live in the ledger")

@@ -6,7 +6,9 @@ The ledger stays the single source of truth. The page is generated from it by a 
 
 ## When to offer it
 
-Only when the human asks for a batched review: "give me a page", "let me mark them all up and send them at once", "a report I can go through". Then say what it is in one line and render it. A session that never uses the page runs exactly as SKILL.md describes.
+Offer it once, in one line, when you present the ledger table at the end of step 2: the human can question and pick in chat, or you can make a review page so they mark every entry in one pass in their browser. For example: "You can question and pick these here, or I can make a review page so you can mark them all in one pass in your browser. Want the page?"
+
+Render it whenever the human asks for it later, too. If they choose chat, or let the offer pass, carry on in chat and don't offer it again. A session that never uses the page runs exactly as SKILL.md describes.
 
 ## 1. Render
 
@@ -22,11 +24,11 @@ The script prints every parse warning, and the page shows them in a banner. Each
 
 The page is a file on your machine; the human may be somewhere else.
 
-- If the human can open files on this machine, give them the full path.
+- If the human can open files on this machine, give them the full path and offer to open it in their default browser (`xdg-open` on Linux, `open` on macOS, `start` on Windows). Open it only if they say yes.
 - In a cloud or remote session, send them the file itself with whatever file delivery the environment offers, and tell them to open it in a browser. If you can't tell which case you're in, ask.
 - Publish the page somewhere hosted only when the human asks for that: it summarises unreleased work.
 
-Either way, tell them how a round works: decide each entry with the buttons or `1` `2` `3` `X`, ask questions with `C`, then press **Send to Claude** and **Copy for Claude**, and paste the result into this chat. The draft is kept in that browser's storage between visits. Verified in Chromium and Firefox, desktop and phone-sized; Safari is untested.
+Either way, tell them how a round works: decide each entry with the buttons or `1` `2` `3` `X`, ask questions with `C`, then press **Finish round** and **Copy responses**, and paste the result into this chat. The page can't reach this session by itself; the paste is the hand-back. The draft is kept in that browser's storage between visits. Verified in Chromium and Firefox, desktop and phone-sized; Safari is untested.
 
 ## 3. Receive
 

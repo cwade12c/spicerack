@@ -71,7 +71,7 @@ Done when the coverage check exits 0 and every entry has its title, description,
 
 Present the ledger to the human as a table: title, one-line description, fit, and dependencies, ordered by dependency so features come before the ones that build on them, with `Plumbing` and `Head-only` last. The full entries stay in the ledger file.
 
-To review the features in one batched pass on a page instead of in chat, if the human asks, read [references/REPORT.md](references/REPORT.md).
+With the table, offer in one line to make a review page: the human can question and pick here in chat, or mark every entry in one pass in their browser. If they want the page, read [references/REPORT.md](references/REPORT.md); otherwise carry on in chat.
 
 ## 3. Interrogate
 
