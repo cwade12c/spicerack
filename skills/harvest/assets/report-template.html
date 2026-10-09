@@ -500,6 +500,7 @@ details.peek pre{max-height:220px;overflow:auto;margin:8px 0 0;padding:10px 12px
   .saved,.hide-sm{display:none}
   .send .lbl{display:none}
   .view-review{grid-template-columns:1fr}
+  main{overflow:hidden}   /* the detail pane waits off-screen; it must not widen the page */
   .dpane{position:absolute;inset:0;z-index:3;transform:translateX(100%);transition:transform .28s var(--ease);visibility:hidden}
   .app.mdetail .dpane{transform:none;visibility:visible}
   .back{display:inline-flex}
@@ -870,7 +871,7 @@ function whyHTML(w) {
   if (m) return '<q>' + esc(m[1]) + '</q>' + (m[3] ? ' <span class="mono" style="color:var(--ink-3)">' + fmt(m[3], {sha: 1}) + '</span>' : '');
   return fmt(w, {sha: 1});
 }
-function fitText(e) { return e.fit_raw.replace(/^(aligned|tension|conflict)\.?\s*/i, ''); }
+function fitText(e) { return e.fit_raw.replace(/^(aligned|tension|conflict)[.,:;]?\s*/i, ''); }   // "aligned, with weight." keeps its qualifier
 function sizeParts(e) {
   const m = /\+([\d,]+)\s*\/\s*-([\d,]+)/.exec(e.size || ''), f = /across\s+(\d+)\s+files?/.exec(e.size || '');
   return m ? {a: +m[1].replace(/,/g, ''), d: +m[2].replace(/,/g, ''), files: f ? +f[1] : null} : null;
@@ -1274,12 +1275,25 @@ function renderPlan() {
 // ---- layers -------------------------------------------------------------------------------------
 let lastFocus = null;
 function openLayer(html, cls) {
-  lastFocus = document.activeElement;
+  // Reopening from inside a layer (the theme item redraws the menu) keeps the original return point.
+  if (!$('#layer').contains(document.activeElement)) lastFocus = document.activeElement;
   $('#layer').innerHTML = '<div class="layer ' + (cls || '') + '" data-act="closelayer">' + html + '</div>';
+  $('#app').inert = true;   // the page behind a dialog is out of reach for Tab and assistive tech
   const f = $('#layer').querySelector('[autofocus], .bigsend, button:not(.ibtn), button');
   if (f) f.focus();
 }
-function closeLayer() { $('#layer').innerHTML = ''; if (lastFocus && document.body.contains(lastFocus)) lastFocus.focus(); }
+function closeLayer() { $('#layer').innerHTML = ''; $('#app').inert = false; if (lastFocus && document.body.contains(lastFocus)) lastFocus.focus(); }
+function layerFocusables() {
+  return [...$('#layer').querySelectorAll('button, [href], input, select, textarea, summary, [tabindex]:not([tabindex="-1"])')]
+    .filter(n => !n.disabled && !n.hidden && n.getClientRects().length);
+}
+// Tab and Shift+Tab cycle inside an open dialog or menu.
+function trapTab(ev) {
+  const f = layerFocusables(); if (!f.length) { ev.preventDefault(); return; }
+  const i = f.indexOf(document.activeElement);
+  if (ev.shiftKey && i <= 0) { ev.preventDefault(); f[f.length - 1].focus(); }
+  else if (!ev.shiftKey && (i < 0 || i === f.length - 1)) { ev.preventDefault(); f[0].focus(); }
+}
 const layerOpen = () => !!$('#layer').firstChild;
 function openSend() {
   const t = tallies(), P = plan();
@@ -1453,7 +1467,15 @@ document.addEventListener('click', ev => {
     case 'view': setView(t.dataset.v); break;
     case 'filter': ui.filter = ui.filter === t.dataset.f && t.dataset.f !== 'all' ? 'all' : t.dataset.f; refresh({skipDetail: true}); break;
     case 'clearfilter': ui.filter = 'all'; ui.q = ''; $('#q').value = ''; refresh({skipDetail: true}); break;
-    case 'mode': mark(id, t.dataset.m); break;
+    case 'mode': {
+      // mark() re-renders the dock; put focus back on the same decision so Tab position survives a click.
+      const box = t.closest('#dock, #insp, #dscroll'), m = t.dataset.m;
+      mark(id, m);
+      const q = '[data-act="mode"][data-id="' + id + '"][data-m="' + m + '"]';
+      const b = (box && document.querySelector('#' + box.id + ' ' + q)) || document.querySelector('#dock ' + q);
+      if (b) b.focus({preventScroll: true});
+      break;
+    }
     case 'reset': act('Reverted ' + id + ' to the ledger', () => { delete get(id).mode; delete get(id).batch; prune(id); }); break;
     case 'addc': addComment(id, t.dataset.kind); break;
     case 'delc': act('Deleted a comment on ' + id, () => { const st = get(id); st.comments = (st.comments || []).filter(c => c.id !== t.dataset.cid); prune(id); }); break;
@@ -1512,6 +1534,7 @@ document.addEventListener('mouseover', ev => {
 });
 document.addEventListener('keydown', ev => {
   const t = ev.target, typing = t.matches && t.matches('input,textarea,[contenteditable="true"]');
+  if (ev.key === 'Tab' && layerOpen()) { trapTab(ev); return; }
   if (ev.key === 'Escape') { if (layerOpen()) { closeLayer(); return; } if (typing) { t.blur(); $('#list').focus({preventScroll: true}); return; } if (document.getElementById('app').classList.contains('mdetail')) document.getElementById('app').classList.remove('mdetail'); return; }
   if ((ev.ctrlKey || ev.metaKey) && ev.key === 'Enter') {
     if (t.dataset && t.dataset.k && t.dataset.k.startsWith('c:')) { ev.preventDefault(); addComment(t.dataset.k.slice(2), ev.shiftKey ? 'note' : 'question'); return; }
