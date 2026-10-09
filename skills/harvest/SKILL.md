@@ -71,7 +71,11 @@ Done when the coverage check exits 0 and every entry has its title, description,
 
 Present the ledger to the human as a table: title, one-line description, fit, and dependencies, ordered by dependency so features come before the ones that build on them, with `Plumbing` and `Head-only` last. The full entries stay in the ledger file.
 
-After the table, ask how the human wants to review, and wait for the answer. Use your multiple-choice question tool if you have one, with the same question and two options, the review page first and marked recommended. Otherwise end your message with this, where `<N>` is the number of feature entries:
+After the table, ask how the human wants to review, and wait for the answer. `<N>` below is the number of feature entries.
+
+If you have a multiple-choice question tool (`AskUserQuestion` in Claude Code), call it right after the table, in the same turn. Ask "How do you want to review these <N> features?" with two options. The first is **Review page (Recommended)**: "Mark all <N> in your browser, ask questions as you go, and send the round back in one paste." The second is **Chat**: "Question and pick entries here, one at a time."
+
+Only if you have no such tool, end your message with this instead:
 
 ```markdown
 ### How do you want to review these <N> features?
