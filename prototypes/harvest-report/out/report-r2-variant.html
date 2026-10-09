@@ -1,0 +1,538 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Harvest report</title>
+<!--
+  PROTOTYPE: fixed template for the harvest review page. render_report.py replaces {"meta": {"title": "Harvest ledger: origin/main → upstream/main", "base": "upstream/main", "base_sha": "4be19e2", "head": "origin/main", "head_sha": "8c1d2e0", "merge_base": "3f2a91c", "updated": "2026-10-02 16:40", "header": {"base": "upstream/main @ 4be19e2", "head": "origin/main @ 8c1d2e0", "merge-base": "3f2a91c", "updated": "2026-10-02 16:40", "content-free merges": "71d0c5a (merge of origin/dev, no content), e92b4f1 (merge of upstream/main into origin/main)", "not in range": "5aa3c10 (upstream merge \"rate limiter rebuild\", brought fork-authored work in below the merge-base)", "read in full": "src/pantry/**, daemon/**", "attributed only": "tests/**, docs/**, deploy/**, uv.lock"}, "ledger_name": "origin-main.md", "ledger_sha256": "96e8f5957bb6e0b8bfb6e3edce748a343923a293b117c772388d6ff17a38f777", "round": 2, "ingested_round": 0, "generated": "2026-10-09T05:02:07Z", "parse_warnings": ["responses round 1 has not been ingested into the ledger (ledger says round 0); its questions are shown as pending"]}, "pending": {"F3": [{"id": "r1.q1", "text": "ADR-002 says job state is in memory. Is the SQLite file optional, or always on?", "answer": "(answer carried in the responses file)", "round": 1}], "F5": [{"id": "r1.q2", "text": "Does the dead-letter table share the job table's retention policy?", "answer": null, "round": 1}], "F10": [{"id": "r1.q4", "text": "Which prometheus-client version, and is it vendored?", "answer": null, "round": 1}]}, "entries": [{"id": "F1", "title": "Structured JSON logging with request ids", "kind": "feature", "description": "Every log line is emitted as one JSON object carrying the job id and a per-request id, instead of free-form text.", "why": "\"grep-able logs for the on-call rotation\" (commit 7ab1c22).", "size": "+180 / -41 across 5 files", "commits": "7ab1c22, 0de4f19", "files": "5 (1 shared). Source: src/pantry/log.py (new), src/pantry/worker.py (shared with F4)", "depends_raw": "none", "depends": [], "fit_raw": "aligned. CONTRIBUTING.md:31 asks for \"machine-readable logs where practical\".", "fit": "aligned", "status_raw": "landed: harvest/structured-json-logging", "status": {"kind": "landed", "branch": "harvest/structured-json-logging", "on_base": false}, "notes": [], "notes_inline": "", "raw": "### F1. Structured JSON logging with request ids\n\nEvery log line is emitted as one JSON object carrying the job id and a per-request id, instead of free-form text.\nWhy: \"grep-able logs for the on-call rotation\" (commit 7ab1c22).\n\n- Size: +180 / -41 across 5 files\n- Commits: 7ab1c22, 0de4f19\n- Files: 5 (1 shared). Source: src/pantry/log.py (new), src/pantry/worker.py (shared with F4)\n- Depends on: none\n- Fit: aligned. CONTRIBUTING.md:31 asks for \"machine-readable logs where practical\".\n- Status: landed: harvest/structured-json-logging", "order": 0}, {"id": "F2", "title": "Layered TOML config loader", "kind": "feature", "description": "Config is read from /etc, then the user directory, then the working directory, each layer overriding the last.", "why": "\"ops wanted per-host overrides without editing the shipped file\" (commit 3c9d8e0).", "size": "+210 / -66 across 4 files", "commits": "3c9d8e0, b4417ad", "files": "4 (2 shared). Source: src/pantry/config.py (shared with F14, F16), src/pantry/cli.py", "depends_raw": "none", "depends": [], "fit_raw": "aligned. README.md:58 lists \"files in /etc\" as supported config; layering is a small extension.", "fit": "aligned", "status_raw": "open", "status": {"kind": "open"}, "notes": [], "notes_inline": "", "raw": "### F2. Layered TOML config loader\n\nConfig is read from /etc, then the user directory, then the working directory, each layer overriding the last.\nWhy: \"ops wanted per-host overrides without editing the shipped file\" (commit 3c9d8e0).\n\n- Size: +210 / -66 across 4 files\n- Commits: 3c9d8e0, b4417ad\n- Files: 4 (2 shared). Source: src/pantry/config.py (shared with F14, F16), src/pantry/cli.py\n- Depends on: none\n- Fit: aligned. README.md:58 lists \"files in /etc\" as supported config; layering is a small extension.\n- Status: open", "order": 1}, {"id": "F3", "title": "Persist job records in SQLite", "kind": "feature", "description": "Job state survives a daemon restart because it is stored in a SQLite file instead of an in-memory dict.", "why": "\"jobs were lost on every deploy\" (commit 91fe0b3).", "size": "+520 / -88 across 9 files", "commits": "91fe0b3, a77c4de, 2d0e8b9", "files": "9 (3 shared). Source: src/pantry/store.py (new), src/pantry/queue.py (shared with F6, F13), src/pantry/models.py", "depends_raw": "F2 (reads the database path from the layered config)", "depends": ["F2"], "fit_raw": "tension. ADR-002 says \"job state is in memory; durability is the caller's problem\".", "fit": "tension", "status_raw": "open", "status": {"kind": "open"}, "notes": [], "notes_inline": "", "raw": "### F3. Persist job records in SQLite\n\nJob state survives a daemon restart because it is stored in a SQLite file instead of an in-memory dict.\nWhy: \"jobs were lost on every deploy\" (commit 91fe0b3).\n\n- Size: +520 / -88 across 9 files\n- Commits: 91fe0b3, a77c4de, 2d0e8b9\n- Files: 9 (3 shared). Source: src/pantry/store.py (new), src/pantry/queue.py (shared with F6, F13), src/pantry/models.py\n- Depends on: F2 (reads the database path from the layered config)\n- Fit: tension. ADR-002 says \"job state is in memory; durability is the caller's problem\".\n- Status: open", "order": 2}, {"id": "F4", "title": "Retry failed jobs with exponential backoff", "kind": "feature", "description": "Jobs that fail are retried up to five times with growing delays, instead of being dropped.", "why": "\"flaky downstreams drop work silently\" (commit c3a90e5).", "size": "+240 / -12 across 6 files", "commits": "c3a90e5, e4f5a6b (partial: src/pantry/queue.py)", "files": "6 (2 shared). Source: src/pantry/retry.py (new), src/pantry/queue.py (shared with F3)", "depends_raw": "F3 (attempt counts live in the job table), F1 (adds `_retry_delay` to F1's log context)", "depends": ["F3", "F1"], "fit_raw": "tension. Adds a background timer thread; ADR-004 says the worker is single-threaded.", "fit": "tension", "status_raw": "open", "status": {"kind": "open"}, "notes": [{"date": "2026-10-02", "kind": "question", "round": null, "qid": null, "text": "Does the retry timer really need its own thread?", "answer": "It only runs the backoff sleep (retry.py:40-88). Base's worker already has a scheduled-job queue (worker/jobs.py:12), so a retry could re-enqueue itself with a delay and ADR-004 stays intact."}], "notes_inline": "", "raw": "### F4. Retry failed jobs with exponential backoff\n\nJobs that fail are retried up to five times with growing delays, instead of being dropped.\nWhy: \"flaky downstreams drop work silently\" (commit c3a90e5).\n\n- Size: +240 / -12 across 6 files\n- Commits: c3a90e5, e4f5a6b (partial: src/pantry/queue.py)\n- Files: 6 (2 shared). Source: src/pantry/retry.py (new), src/pantry/queue.py (shared with F3)\n- Depends on: F3 (attempt counts live in the job table), F1 (adds `_retry_delay` to F1's log context)\n- Fit: tension. Adds a background timer thread; ADR-004 says the worker is single-threaded.\n- Status: open\n- Notes:\n  - 2026-10-02 Q: Does the retry timer really need its own thread? A: It only runs the backoff sleep (retry.py:40-88). Base's worker already has a scheduled-job queue (worker/jobs.py:12), so a retry could re-enqueue itself with a delay and ADR-004 stays intact.", "order": 3}, {"id": "F5", "title": "Dead-letter queue for exhausted retries", "kind": "feature", "description": "Jobs that use up their retries are parked in a dead-letter table where an operator can inspect and replay them.", "why": "\"we kept losing the jobs that mattered most\" (commit 5f1be27).", "size": "+160 / -4 across 3 files", "commits": "5f1be27", "files": "3 (1 shared). Source: src/pantry/deadletter.py (new), src/pantry/retry.py (shared with F4)", "depends_raw": "F4 (hooks the retry-exhausted event), F3 (dead letters are rows in the job table)", "depends": ["F4", "F3"], "fit_raw": "aligned. docs/design.md:44 already names a \"dead letter\" as a future concept.", "fit": "aligned", "status_raw": "open", "status": {"kind": "open"}, "notes": [], "notes_inline": "", "raw": "### F5. Dead-letter queue for exhausted retries\n\nJobs that use up their retries are parked in a dead-letter table where an operator can inspect and replay them.\nWhy: \"we kept losing the jobs that mattered most\" (commit 5f1be27).\n\n- Size: +160 / -4 across 3 files\n- Commits: 5f1be27\n- Files: 3 (1 shared). Source: src/pantry/deadletter.py (new), src/pantry/retry.py (shared with F4)\n- Depends on: F4 (hooks the retry-exhausted event), F3 (dead letters are rows in the job table)\n- Fit: aligned. docs/design.md:44 already names a \"dead letter\" as a future concept.\n- Status: open", "order": 4}, {"id": "F6", "title": "Priority lanes (high, normal, low)", "kind": "feature", "description": "Jobs carry a priority and workers drain high before normal before low, instead of strict arrival order.", "why": "\"billing jobs queued behind a 40,000-row export\" (commit 08ac6d1).", "size": "+130 / -30 across 4 files", "commits": "08ac6d1, 1b7e33f", "files": "4 (1 shared). Source: src/pantry/queue.py (shared with F3), src/pantry/priority.py (new)", "depends_raw": "F3 (priority is a column on the job row)", "depends": ["F3"], "fit_raw": "aligned. README.md:72 lists \"ordering\" as an extension point.", "fit": "aligned", "status_raw": "open", "status": {"kind": "open"}, "notes": [], "notes_inline": "", "raw": "### F6. Priority lanes (high, normal, low)\n\nJobs carry a priority and workers drain high before normal before low, instead of strict arrival order.\nWhy: \"billing jobs queued behind a 40,000-row export\" (commit 08ac6d1).\n\n- Size: +130 / -30 across 4 files\n- Commits: 08ac6d1, 1b7e33f\n- Files: 4 (1 shared). Source: src/pantry/queue.py (shared with F3), src/pantry/priority.py (new)\n- Depends on: F3 (priority is a column on the job row)\n- Fit: aligned. README.md:72 lists \"ordering\" as an extension point.\n- Status: open", "order": 5}, {"id": "F7", "title": "Per-queue concurrency limits", "kind": "feature", "description": "Each named queue can cap how many of its jobs run at once, instead of one global worker count.", "why": "\"one noisy queue starves the rest\" (commit d19e840).", "size": "+95 / -22 across 3 files", "commits": "d19e840", "files": "3 (2 shared). Source: src/pantry/worker.py (shared with F1, F8), src/pantry/config.py (shared with F2)", "depends_raw": "F2 (limits are configured per queue), F6 (limits apply per lane)", "depends": ["F2", "F6"], "fit_raw": "tension. ADR-004's single-threaded worker has no notion of concurrent jobs; this assumes a thread pool.", "fit": "tension", "status_raw": "open", "status": {"kind": "open"}, "notes": [], "notes_inline": "", "raw": "### F7. Per-queue concurrency limits\n\nEach named queue can cap how many of its jobs run at once, instead of one global worker count.\nWhy: \"one noisy queue starves the rest\" (commit d19e840).\n\n- Size: +95 / -22 across 3 files\n- Commits: d19e840\n- Files: 3 (2 shared). Source: src/pantry/worker.py (shared with F1, F8), src/pantry/config.py (shared with F2)\n- Depends on: F2 (limits are configured per queue), F6 (limits apply per lane)\n- Fit: tension. ADR-004's single-threaded worker has no notion of concurrent jobs; this assumes a thread pool.\n- Status: open", "order": 6}, {"id": "F8", "title": "Graceful shutdown drains in-flight jobs", "kind": "feature", "description": "On SIGTERM the daemon stops taking new jobs and waits for running ones to finish, up to a configurable grace period.", "why": "\"deploys killed jobs halfway through\" (commit 6e2d415).", "size": "+85 / -9 across 3 files", "commits": "6e2d415", "files": "3 (1 shared). Source: src/pantry/shutdown.py (new), src/pantry/worker.py (shared with F1, F7)", "depends_raw": "none", "depends": [], "fit_raw": "aligned. CONTRIBUTING.md:19 asks that long-running processes handle SIGTERM.", "fit": "aligned", "status_raw": "picked: cherry-pick, batch: shutdown", "status": {"kind": "picked", "mode": "cherry-pick", "batch": "shutdown"}, "notes": [], "notes_inline": "", "raw": "### F8. Graceful shutdown drains in-flight jobs\n\nOn SIGTERM the daemon stops taking new jobs and waits for running ones to finish, up to a configurable grace period.\nWhy: \"deploys killed jobs halfway through\" (commit 6e2d415).\n\n- Size: +85 / -9 across 3 files\n- Commits: 6e2d415\n- Files: 3 (1 shared). Source: src/pantry/shutdown.py (new), src/pantry/worker.py (shared with F1, F7)\n- Depends on: none\n- Fit: aligned. CONTRIBUTING.md:19 asks that long-running processes handle SIGTERM.\n- Status: picked: cherry-pick, batch: shutdown", "order": 7}, {"id": "F9", "title": "Health endpoint", "kind": "feature", "description": "`GET /healthz` returns 200 while the worker loop is alive and 503 once it stalls, for load balancers and orchestrators.", "why": "\"the orchestrator could not tell a stuck daemon from a busy one\" (commit f0a1c93).", "size": "+70 / -0 across 2 files", "commits": "f0a1c93", "files": "2 (0 shared). Source: src/pantry/health.py (new), src/pantry/http.py", "depends_raw": "F1 (uses the request-id middleware)", "depends": ["F1"], "fit_raw": "aligned. README.md:90 says \"a health check is welcome\".", "fit": "aligned", "status_raw": "open", "status": {"kind": "open"}, "notes": [], "notes_inline": "", "raw": "### F9. Health endpoint\n\n`GET /healthz` returns 200 while the worker loop is alive and 503 once it stalls, for load balancers and orchestrators.\nWhy: \"the orchestrator could not tell a stuck daemon from a busy one\" (commit f0a1c93).\n\n- Size: +70 / -0 across 2 files\n- Commits: f0a1c93\n- Files: 2 (0 shared). Source: src/pantry/health.py (new), src/pantry/http.py\n- Depends on: F1 (uses the request-id middleware)\n- Fit: aligned. README.md:90 says \"a health check is welcome\".\n- Status: open", "order": 8}, {"id": "F10", "title": "Prometheus metrics endpoint", "kind": "feature", "description": "`GET /metrics` exposes queue depth, job durations and failure counts in Prometheus text format.", "why": "unstated.", "size": "+190 / -6 across 4 files", "commits": "44cd02e, 9be5f71", "files": "4 (1 shared). Source: src/pantry/metrics.py (new), src/pantry/http.py (shared with F9)", "depends_raw": "F9 (registers on the same HTTP server), F1", "depends": ["F9", "F1"], "fit_raw": "tension. CONTRIBUTING.md:44 says new runtime dependencies need an ADR; this adds `prometheus-client`.", "fit": "tension", "status_raw": "open", "status": {"kind": "open"}, "notes": [], "notes_inline": "", "raw": "### F10. Prometheus metrics endpoint\n\n`GET /metrics` exposes queue depth, job durations and failure counts in Prometheus text format.\nWhy: unstated.\n\n- Size: +190 / -6 across 4 files\n- Commits: 44cd02e, 9be5f71\n- Files: 4 (1 shared). Source: src/pantry/metrics.py (new), src/pantry/http.py (shared with F9)\n- Depends on: F9 (registers on the same HTTP server), F1\n- Fit: tension. CONTRIBUTING.md:44 says new runtime dependencies need an ADR; this adds `prometheus-client`.\n- Status: open", "order": 9}, {"id": "F11", "title": "Admin CLI for jobs", "kind": "feature", "description": "`pantryctl jobs list|show|retry|cancel` lets an operator inspect and act on jobs from a shell.", "why": "\"we were running SQL by hand\" (commit b82f6a4).", "size": "+310 / -0 across 5 files", "commits": "b82f6a4, 73e9d0c", "files": "5 (1 shared). Source: src/pantryctl/ (new), src/pantry/cli.py (shared with F2)", "depends_raw": "F3 (reads the job table), F5 (the `retry` subcommand replays dead letters)", "depends": ["F3", "F5"], "fit_raw": "aligned. docs/design.md:61 sketches a control CLI.", "fit": "aligned", "status_raw": "open", "status": {"kind": "open"}, "notes": [], "notes_inline": "", "raw": "### F11. Admin CLI for jobs\n\n`pantryctl jobs list|show|retry|cancel` lets an operator inspect and act on jobs from a shell.\nWhy: \"we were running SQL by hand\" (commit b82f6a4).\n\n- Size: +310 / -0 across 5 files\n- Commits: b82f6a4, 73e9d0c\n- Files: 5 (1 shared). Source: src/pantryctl/ (new), src/pantry/cli.py (shared with F2)\n- Depends on: F3 (reads the job table), F5 (the `retry` subcommand replays dead letters)\n- Fit: aligned. docs/design.md:61 sketches a control CLI.\n- Status: open", "order": 10}, {"id": "F12", "title": "Web admin UI", "kind": "feature", "description": "A small single-page web app lists queues and jobs, with buttons to retry and cancel, served from the daemon itself.", "why": "\"the CLI is not for the support team\" (commit e61f3b8).", "size": "+1,420 / -0 across 22 files", "commits": "e61f3b8, 02d7aa4, c5b9e61", "files": "22 (1 shared). Source: web/ (new), src/pantry/http.py (shared with F9, F10)", "depends_raw": "F11 (calls the same actions), F10 (draws charts from /metrics)", "depends": ["F11", "F10"], "fit_raw": "conflict. README.md:12 states \"no web UI; the daemon is headless by design\".", "fit": "conflict", "status_raw": "open", "status": {"kind": "open"}, "notes": [], "notes_inline": "", "raw": "### F12. Web admin UI\n\nA small single-page web app lists queues and jobs, with buttons to retry and cancel, served from the daemon itself.\nWhy: \"the CLI is not for the support team\" (commit e61f3b8).\n\n- Size: +1,420 / -0 across 22 files\n- Commits: e61f3b8, 02d7aa4, c5b9e61\n- Files: 22 (1 shared). Source: web/ (new), src/pantry/http.py (shared with F9, F10)\n- Depends on: F11 (calls the same actions), F10 (draws charts from /metrics)\n- Fit: conflict. README.md:12 states \"no web UI; the daemon is headless by design\".\n- Status: open", "order": 11}, {"id": "F13", "title": "Scheduled (cron-style) jobs", "kind": "feature", "description": "A job can be registered with a cron expression and the daemon enqueues it on schedule, instead of relying on an external cron.", "why": "\"cron on three hosts fired the same job three times\" (commit 1ae48d7).", "size": "+260 / -14 across 5 files", "commits": "1ae48d7, 8d03fb6", "files": "5 (2 shared). Source: src/pantry/schedule.py (new), src/pantry/queue.py (shared with F3, F6)", "depends_raw": "F3 (schedule state is persisted), F6 (scheduled jobs pick a lane)", "depends": ["F3", "F6"], "fit_raw": "tension. ADR-005 says \"scheduling is the caller's job\".", "fit": "tension", "status_raw": "open", "status": {"kind": "open"}, "notes": [], "notes_inline": "", "raw": "### F13. Scheduled (cron-style) jobs\n\nA job can be registered with a cron expression and the daemon enqueues it on schedule, instead of relying on an external cron.\nWhy: \"cron on three hosts fired the same job three times\" (commit 1ae48d7).\n\n- Size: +260 / -14 across 5 files\n- Commits: 1ae48d7, 8d03fb6\n- Files: 5 (2 shared). Source: src/pantry/schedule.py (new), src/pantry/queue.py (shared with F3, F6)\n- Depends on: F3 (schedule state is persisted), F6 (scheduled jobs pick a lane)\n- Fit: tension. ADR-005 says \"scheduling is the caller's job\".\n- Status: open", "order": 12}, {"id": "F14", "title": "Signed job payloads (HMAC)", "kind": "feature", "description": "Payloads are signed when enqueued and verified before running, so a tampered row is rejected.", "why": "\"the queue file is world-readable on shared hosts\" (commit a2e07c8).", "size": "+120 / -3 across 3 files", "commits": "a2e07c8", "files": "3 (1 shared). Source: src/pantry/signing.py (new), src/pantry/config.py (shared with F2)", "depends_raw": "F2 (the signing key comes from config)", "depends": ["F2"], "fit_raw": "aligned. CONTRIBUTING.md:52 asks for integrity checks on persisted data.", "fit": "aligned", "status_raw": "left", "status": {"kind": "left"}, "notes": [], "notes_inline": "", "raw": "### F14. Signed job payloads (HMAC)\n\nPayloads are signed when enqueued and verified before running, so a tampered row is rejected.\nWhy: \"the queue file is world-readable on shared hosts\" (commit a2e07c8).\n\n- Size: +120 / -3 across 3 files\n- Commits: a2e07c8\n- Files: 3 (1 shared). Source: src/pantry/signing.py (new), src/pantry/config.py (shared with F2)\n- Depends on: F2 (the signing key comes from config)\n- Fit: aligned. CONTRIBUTING.md:52 asks for integrity checks on persisted data.\n- Status: left", "order": 13}, {"id": "F15", "title": "Job timeouts with cancellation", "kind": "feature", "description": "A job that runs past its timeout is cancelled cooperatively, and killed if it ignores the cancellation.", "why": "\"a hung job held a worker slot for nine days\" (commit 37b5d1e).", "size": "+175 / -20 across 4 files", "commits": "37b5d1e, c0f9a42", "files": "4 (2 shared). Source: src/pantry/timeout.py (new), src/pantry/worker.py (shared with F1, F7, F8)", "depends_raw": "F8 (reuses the drain/cancel path), F4 (a timeout counts as a failed attempt)", "depends": ["F8", "F4"], "fit_raw": "tension. Cooperative cancellation needs a second thread; ADR-004.", "fit": "tension", "status_raw": "open", "status": {"kind": "open"}, "notes": [], "notes_inline": "", "raw": "### F15. Job timeouts with cancellation\n\nA job that runs past its timeout is cancelled cooperatively, and killed if it ignores the cancellation.\nWhy: \"a hung job held a worker slot for nine days\" (commit 37b5d1e).\n\n- Size: +175 / -20 across 4 files\n- Commits: 37b5d1e, c0f9a42\n- Files: 4 (2 shared). Source: src/pantry/timeout.py (new), src/pantry/worker.py (shared with F1, F7, F8)\n- Depends on: F8 (reuses the drain/cancel path), F4 (a timeout counts as a failed attempt)\n- Fit: tension. Cooperative cancellation needs a second thread; ADR-004.\n- Status: open", "order": 14}, {"id": "F16", "title": "Webhook notification when a job dead-letters", "kind": "feature", "description": "An operator-configured URL receives a POST with the job summary when a job lands in the dead-letter table.", "why": "\"we found dead jobs a week late\" (commit 9d44e6b).", "size": "+110 / -0 across 3 files", "commits": "9d44e6b", "files": "3 (1 shared). Source: src/pantry/notify.py (new), src/pantry/config.py (shared with F2)", "depends_raw": "F5 (fires on the dead-letter event), F2 (URL from config), F1 (line to edit: log context in `notify._post`)", "depends": ["F5", "F2", "F1"], "fit_raw": "aligned. README.md:95 mentions \"outgoing hooks\" as welcome.", "fit": "aligned", "status_raw": "open", "status": {"kind": "open"}, "notes": [{"date": "2026-10-02", "kind": "note", "round": null, "qid": null, "text": "A shared secret for the webhook is stored in plain config; check whether F14's signing key can be reused."}], "notes_inline": "", "raw": "### F16. Webhook notification when a job dead-letters\n\nAn operator-configured URL receives a POST with the job summary when a job lands in the dead-letter table.\nWhy: \"we found dead jobs a week late\" (commit 9d44e6b).\n\n- Size: +110 / -0 across 3 files\n- Commits: 9d44e6b\n- Files: 3 (1 shared). Source: src/pantry/notify.py (new), src/pantry/config.py (shared with F2)\n- Depends on: F5 (fires on the dead-letter event), F2 (URL from config), F1 (line to edit: log context in `notify._post`)\n- Fit: aligned. README.md:95 mentions \"outgoing hooks\" as welcome.\n- Status: open\n- Notes:\n  - 2026-10-02 Note: A shared secret for the webhook is stored in plain config; check whether F14's signing key can be reused.", "order": 15}, {"id": "F17", "title": "Multi-tenant namespaces", "kind": "feature", "description": "Queues, jobs and config can be scoped to a tenant name, and tenants cannot see each other's jobs.", "why": "\"we host three customers on one daemon\" (commit 55e1d0b).", "size": "+640 / -210 across 14 files", "commits": "55e1d0b, 61c8fa2, d7a03e9", "files": "14 (6 shared). Source: src/pantry/tenancy.py (new), src/pantry/store.py (shared with F3), src/pantry/config.py (shared with F2)", "depends_raw": "F3, F2, F7 (per-tenant concurrency)", "depends": ["F3", "F2", "F7"], "fit_raw": "conflict. README.md:12 and ADR-001 describe a single-tenant daemon; every public function would change.", "fit": "conflict", "status_raw": "open", "status": {"kind": "open"}, "notes": [], "notes_inline": "", "raw": "### F17. Multi-tenant namespaces\n\nQueues, jobs and config can be scoped to a tenant name, and tenants cannot see each other's jobs.\nWhy: \"we host three customers on one daemon\" (commit 55e1d0b).\n\n- Size: +640 / -210 across 14 files\n- Commits: 55e1d0b, 61c8fa2, d7a03e9\n- Files: 14 (6 shared). Source: src/pantry/tenancy.py (new), src/pantry/store.py (shared with F3), src/pantry/config.py (shared with F2)\n- Depends on: F3, F2, F7 (per-tenant concurrency)\n- Fit: conflict. README.md:12 and ADR-001 describe a single-tenant daemon; every public function would change.\n- Status: open", "order": 16}, {"id": "Plumbing", "title": "Dependency bumps, CI cache, renames", "kind": "plumbing", "description": "Formatting, lockfile updates, the CI cache key and a package rename, with no user-facing intent.", "why": "unstated.", "size": "+310 / -290 across 18 files", "commits": "1f0c2b7, 8a6d9e4, c71e0b3", "files": "18 (0 shared). Source: pyproject.toml, uv.lock, .github/workflows/ci.yml", "depends_raw": "none", "depends": [], "fit_raw": "aligned. Nothing here touches behaviour.", "fit": "aligned", "status_raw": "open", "status": {"kind": "open"}, "notes": [], "notes_inline": "", "raw": "### Plumbing. Dependency bumps, CI cache, renames\n\nFormatting, lockfile updates, the CI cache key and a package rename, with no user-facing intent.\nWhy: unstated.\n\n- Size: +310 / -290 across 18 files\n- Commits: 1f0c2b7, 8a6d9e4, c71e0b3\n- Files: 18 (0 shared). Source: pyproject.toml, uv.lock, .github/workflows/ci.yml\n- Depends on: none\n- Fit: aligned. Nothing here touches behaviour.\n- Status: open", "order": 17}, {"id": "Head-only", "title": "Fork docs, deployment config, persona", "kind": "headonly", "description": "The fork's own README banner, Kubernetes manifests and deploy scripts.", "why": "unstated.", "size": "+480 / -12 across 17 files", "commits": "2b9e7a0, f44d1c6", "files": "17 (0 shared). Source: deploy/**, FORK.md, README.md (banner only)", "depends_raw": "none", "depends": [], "fit_raw": "conflict. FORK.md:7 keeps deployment config off upstream.", "fit": "conflict", "status_raw": "open", "status": {"kind": "open"}, "notes": [], "notes_inline": "", "raw": "### Head-only. Fork docs, deployment config, persona\n\nThe fork's own README banner, Kubernetes manifests and deploy scripts.\nWhy: unstated.\n\n- Size: +480 / -12 across 17 files\n- Commits: 2b9e7a0, f44d1c6\n- Files: 17 (0 shared). Source: deploy/**, FORK.md, README.md (banner only)\n- Depends on: none\n- Fit: conflict. FORK.md:7 keeps deployment config off upstream.\n- Status: open", "order": 18}, {"id": "S1", "title": "Token-bucket rate limiter (rebuilt on upstream, merged back)", "kind": "setaside", "description": "The rate limiter the fork wrote was rebuilt onto upstream last month and merged back, so the fork's original commits show in the log.", "why": "\"limit abusive enqueuers\" (commit 4d8e2c1).", "size": "+140 / -0 across 3 files", "commits": "4d8e2c1, 90b3ae7", "files": "3 (0 shared). Source: src/pantry/ratelimit.py", "depends_raw": "none", "depends": [], "fit_raw": "aligned. Already on base.", "fit": "aligned", "status_raw": "landed: already on base", "status": {"kind": "landed", "branch": "already on base", "on_base": true}, "notes": [{"kind": "plain", "text": "Evidence: upstream/main src/pantry/ratelimit.py has the same bucket logic (merge 5aa3c10); pass 3."}], "notes_inline": "", "raw": "### S1. Token-bucket rate limiter (rebuilt on upstream, merged back)\n\nThe rate limiter the fork wrote was rebuilt onto upstream last month and merged back, so the fork's original commits show in the log.\nWhy: \"limit abusive enqueuers\" (commit 4d8e2c1).\n\n- Size: +140 / -0 across 3 files\n- Commits: 4d8e2c1, 90b3ae7\n- Files: 3 (0 shared). Source: src/pantry/ratelimit.py\n- Depends on: none\n- Fit: aligned. Already on base.\n- Status: landed: already on base\n- Notes:\n  - Evidence: upstream/main src/pantry/ratelimit.py has the same bucket logic (merge 5aa3c10); pass 3.", "order": 19}, {"id": "S2", "title": "`--version` flag", "kind": "setaside", "description": "`pantry --version` prints the package version.", "why": "unstated.", "size": "+12 / -0 across 1 file", "commits": "6c1d0fa", "files": "1 (0 shared). Source: src/pantry/cli.py", "depends_raw": "none", "depends": [], "fit_raw": "aligned. Already on base.", "fit": "aligned", "status_raw": "landed: already on base", "status": {"kind": "landed", "branch": "already on base", "on_base": true}, "notes": [{"kind": "plain", "text": "Evidence: patch-equivalent commit on base (pass 1, `git log --cherry-pick`)."}], "notes_inline": "", "raw": "### S2. `--version` flag\n\n`pantry --version` prints the package version.\nWhy: unstated.\n\n- Size: +12 / -0 across 1 file\n- Commits: 6c1d0fa\n- Files: 1 (0 shared). Source: src/pantry/cli.py\n- Depends on: none\n- Fit: aligned. Already on base.\n- Status: landed: already on base\n- Notes:\n  - Evidence: patch-equivalent commit on base (pass 1, `git log --cherry-pick`).", "order": 20}]}
+  with the parsed ledger. The page never edits the ledger; it produces a responses file.
+  Offline, no CDN, no framework.
+-->
+<style>
+:root{
+  --bg:#f7f7f5; --panel:#fff; --ink:#1d1d1b; --mute:#6b6b66; --line:#e2e1dc; --accent:#3b4fd8; --accent-ink:#fff;
+  --accent-soft:#e8ebfc; --warn:#a15c00; --warn-bg:#fff3d6; --ok:#1d7a46; --ok-bg:#e3f4ea; --bad:#b3261e; --bad-bg:#fde8e6;
+  --shade:#f0efeb;
+}
+@media (prefers-color-scheme:dark){:root{
+  --bg:#17171a; --panel:#1f1f23; --ink:#ecebe6; --mute:#9a9a94; --line:#33333a; --accent:#8a98ff; --accent-ink:#0f1030;
+  --accent-soft:#272b4d; --warn:#f2b44d; --warn-bg:#3a2e12; --ok:#6fd49a; --ok-bg:#16301f; --bad:#ff8f86; --bad-bg:#3c1b19; --shade:#26262b;
+}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif}
+button,input,textarea,select{font:inherit;color:inherit}
+button{cursor:pointer}
+code,pre{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12.5px}
+.wrap{max-width:1320px;margin:0 auto;padding:0 20px 80px}
+header.top{position:sticky;top:0;z-index:10;background:var(--bg);border-bottom:1px solid var(--line);padding:10px 0}
+.top .row1{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:baseline;justify-content:space-between}
+h1{font-size:17px;margin:0}
+.sub{color:var(--mute);font-size:12.5px}
+.bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:8px}
+.btn{border:1px solid var(--line);background:var(--panel);border-radius:6px;padding:5px 11px}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn[disabled]{opacity:.45;cursor:not-allowed}
+.sp{flex:1}
+.counts{display:flex;gap:6px;flex-wrap:wrap}
+.pill{border:1px solid var(--line);border-radius:99px;padding:1px 9px;background:var(--panel);font-size:12.5px;white-space:nowrap}
+.pill.warn{background:var(--warn-bg);border-color:var(--warn);color:var(--warn)}
+.pill.on{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+button.pill{cursor:pointer}
+.savestate{font-size:12.5px;color:var(--mute)}
+.banner{margin:12px 0 0;padding:8px 12px;border-radius:6px;background:var(--warn-bg);color:var(--warn);border:1px solid var(--warn);font-size:13px}
+.banner ul{margin:4px 0 0 18px;padding:0}
+table{width:100%;border-collapse:collapse;table-layout:fixed;background:var(--panel);border:1px solid var(--line);border-radius:8px;margin-top:14px}
+th{font-size:11.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--mute);text-align:left;padding:7px 10px;border-bottom:1px solid var(--line);background:var(--shade)}
+td{padding:8px 10px;vertical-align:top;border-bottom:1px solid var(--line)}
+tr.grp td{background:var(--shade);font-size:11.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--mute);padding:5px 10px}
+tr.main{cursor:pointer}
+tr.main:hover td{background:color-mix(in srgb,var(--accent) 4%,var(--panel))}
+tr.main td:first-child{border-left:4px solid transparent}
+tr.picked td:first-child{border-left-color:var(--accent)}
+tr.landed td:first-child{border-left-color:var(--ok)}
+tr.left td:first-child{border-left-color:var(--mute)}
+tr.haswarn td:first-child{border-left-color:var(--warn)}
+tr.landed td,tr.setaside td{background-image:repeating-linear-gradient(135deg,transparent 0 7px,color-mix(in srgb,var(--ok) 6%,transparent) 7px 8px)}
+tr.landed .title,tr.setaside .title{color:var(--mute)}
+tr.left .title{color:var(--mute);text-decoration:line-through}
+.id{font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap}
+.title{font-weight:600}
+.desc{color:var(--mute);margin-top:1px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+tr.open .desc{display:block;-webkit-line-clamp:unset}
+.meta{margin-top:4px;display:flex;gap:6px;flex-wrap:wrap;font-size:12px}
+.tag{display:inline-block;max-width:100%;border-radius:4px;padding:0 6px;font-size:12px;border:1px solid var(--line);background:var(--shade);overflow-wrap:anywhere}
+.tag.aligned{background:var(--ok-bg);color:var(--ok);border-color:transparent}
+.tag.tension{background:var(--warn-bg);color:var(--warn);border-color:transparent}
+.tag.conflict{background:var(--bad-bg);color:var(--bad);border-color:transparent}
+.tag.warn{background:var(--warn-bg);color:var(--warn);border-color:var(--warn)}
+.tag.q{background:var(--accent-soft);color:var(--accent);border-color:transparent}
+.chip{border:1px solid var(--line);background:var(--panel);border-radius:4px;padding:0 6px;font-size:12px;margin:0 3px 3px 0;display:inline-block}
+.chip.landed{background:var(--ok-bg);color:var(--ok);border-color:transparent}
+.chip.picked{background:var(--accent-soft);color:var(--accent);border-color:transparent}
+.chip.left{color:var(--mute);text-decoration:line-through}
+.chip.bad{background:var(--warn-bg);color:var(--warn);border-color:var(--warn)}
+.needed{font-size:11.5px;color:var(--mute);margin-top:2px}
+.seg{display:flex;flex-wrap:wrap;gap:3px}
+.seg button{border:1px solid var(--line);background:var(--panel);border-radius:5px;padding:2px 7px;font-size:12.5px}
+.seg button[aria-pressed=true]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.seg button.left[aria-pressed=true]{background:var(--mute);border-color:var(--mute)}
+input[type=text],textarea{border:1px solid var(--line);background:var(--bg);border-radius:5px;padding:3px 7px;width:100%}
+input[type=text]:focus,textarea:focus{outline:2px solid var(--accent);outline-offset:-1px}
+.batch{margin-top:4px;display:flex;gap:4px;align-items:center;font-size:12px;color:var(--mute)}
+.batch input{padding:1px 5px;font-size:12.5px}
+tr.detail>td{background:var(--bg);padding:12px 14px 16px 18px;cursor:default}
+.dgrid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:18px}
+@media (max-width:980px){.dgrid{grid-template-columns:1fr}}
+.dgrid h4{margin:0 0 6px;font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--mute)}
+dl.f{margin:0;display:grid;grid-template-columns:90px 1fr;gap:3px 10px}
+dl.f dt{color:var(--mute)} dl.f dd{margin:0}
+.thread{border-left:3px solid var(--line);padding:2px 0 2px 10px;margin:0 0 10px}
+.thread .a{margin-top:3px;background:var(--ok-bg);border-radius:5px;padding:4px 8px}
+.thread .a.wait{background:var(--shade);color:var(--mute)}
+.thread time{color:var(--mute);font-size:12px;margin-left:6px}
+.cm{display:flex;gap:8px;align-items:flex-start;margin-bottom:6px;padding:5px 8px;background:var(--panel);border:1px solid var(--line);border-radius:6px}
+.cm .x{margin-left:auto;border:0;background:none;color:var(--mute)}
+.cm div{flex:1;white-space:pre-wrap}
+.warnbox{background:var(--warn-bg);border:1px solid var(--warn);color:var(--warn);border-radius:6px;padding:7px 10px;margin-bottom:10px}
+.warnbox.cut{background:var(--shade);border-color:var(--line);color:var(--ink)}
+.warnbox .cutrow{display:flex;gap:6px;align-items:center;margin-top:5px;color:var(--ink)}
+.composer{margin-top:8px}
+.composer textarea{min-height:54px;resize:vertical}
+.composer .crow{display:flex;gap:10px;align-items:center;margin-top:5px}
+details.raw{margin-top:10px} details.raw pre{white-space:pre-wrap;background:var(--shade);padding:8px;border-radius:5px;margin:6px 0 0}
+section.panel{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px 14px;margin-top:16px}
+section.panel h2{font-size:14px;margin:0 0 8px}
+.batches{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px}
+.bt{border:1px solid var(--line);border-radius:6px;padding:7px 10px}
+.bt b{font-size:13px}
+.bt .info{font-size:12px;color:var(--warn);margin-top:3px}
+.empty{color:var(--mute)}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:50}
+.modal .box{background:var(--panel);border-radius:8px;padding:16px;width:min(720px,92vw)}
+.modal textarea{height:300px;font-family:ui-monospace,monospace;font-size:12px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="row1">
+      <h1 id="h-title">Harvest report</h1>
+      <div class="sub" id="h-sub"></div>
+    </div>
+    <div class="bar">
+      <button class="btn primary" data-act="export" title="Download responses.json">Export responses.json</button>
+      <button class="btn" data-act="copy" title="Copy the responses as JSON to paste into chat">Copy responses</button>
+      <button class="btn" data-act="fsa" id="b-fsa" title="Write straight to a file you choose (Chromium)">Save to file…</button>
+      <button class="btn" data-act="import" title="Load a responses.json into this page">Import…</button>
+      <button class="btn" data-act="resetdraft" title="Discard this page's draft">Reset draft</button>
+      <input type="file" id="importfile" accept=".json,application/json" hidden>
+      <span class="savestate" id="savestate"></span>
+    </div>
+    <div class="bar">
+      <div class="counts" id="counts"></div>
+      <span class="sp"></span>
+      <div class="counts" id="filters"></div>
+    </div>
+  </header>
+  <div id="banners"></div>
+  <table id="tbl">
+    <colgroup><col style="width:92px"><col><col style="width:84px"><col style="width:150px"><col style="width:178px"><col style="width:236px"></colgroup>
+    <thead><tr><th>#</th><th>Feature</th><th>Fit</th><th>Depends on</th><th>Status</th><th>Mark</th></tr></thead>
+    <tbody id="tb"></tbody>
+  </table>
+  <section class="panel"><h2>Batches <span class="sub">(what the agent will land, from your marks)</span></h2><div class="batches" id="batches"></div></section>
+  <section class="panel"><h2>General notes</h2>
+    <textarea id="general" data-k="general" placeholder="Anything that is not about one entry: ordering preferences, things to check across features…" style="min-height:70px"></textarea>
+  </section>
+  <datalist id="batchlist"></datalist>
+</div>
+<div id="modal"></div>
+
+<script id="harvest-data" type="application/json">{"meta": {"title": "Harvest ledger: origin/main → upstream/main", "base": "upstream/main", "base_sha": "4be19e2", "head": "origin/main", "head_sha": "8c1d2e0", "merge_base": "3f2a91c", "updated": "2026-10-02 16:40", "header": {"base": "upstream/main @ 4be19e2", "head": "origin/main @ 8c1d2e0", "merge-base": "3f2a91c", "updated": "2026-10-02 16:40", "content-free merges": "71d0c5a (merge of origin/dev, no content), e92b4f1 (merge of upstream/main into origin/main)", "not in range": "5aa3c10 (upstream merge \"rate limiter rebuild\", brought fork-authored work in below the merge-base)", "read in full": "src/pantry/**, daemon/**", "attributed only": "tests/**, docs/**, deploy/**, uv.lock"}, "ledger_name": "origin-main.md", "ledger_sha256": "96e8f5957bb6e0b8bfb6e3edce748a343923a293b117c772388d6ff17a38f777", "round": 2, "ingested_round": 0, "generated": "2026-10-09T05:02:07Z", "parse_warnings": ["responses round 1 has not been ingested into the ledger (ledger says round 0); its questions are shown as pending"]}, "pending": {"F3": [{"id": "r1.q1", "text": "ADR-002 says job state is in memory. Is the SQLite file optional, or always on?", "answer": "(answer carried in the responses file)", "round": 1}], "F5": [{"id": "r1.q2", "text": "Does the dead-letter table share the job table's retention policy?", "answer": null, "round": 1}], "F10": [{"id": "r1.q4", "text": "Which prometheus-client version, and is it vendored?", "answer": null, "round": 1}]}, "entries": [{"id": "F1", "title": "Structured JSON logging with request ids", "kind": "feature", "description": "Every log line is emitted as one JSON object carrying the job id and a per-request id, instead of free-form text.", "why": "\"grep-able logs for the on-call rotation\" (commit 7ab1c22).", "size": "+180 / -41 across 5 files", "commits": "7ab1c22, 0de4f19", "files": "5 (1 shared). Source: src/pantry/log.py (new), src/pantry/worker.py (shared with F4)", "depends_raw": "none", "depends": [], "fit_raw": "aligned. CONTRIBUTING.md:31 asks for \"machine-readable logs where practical\".", "fit": "aligned", "status_raw": "landed: harvest/structured-json-logging", "status": {"kind": "landed", "branch": "harvest/structured-json-logging", "on_base": false}, "notes": [], "notes_inline": "", "raw": "### F1. Structured JSON logging with request ids\n\nEvery log line is emitted as one JSON object carrying the job id and a per-request id, instead of free-form text.\nWhy: \"grep-able logs for the on-call rotation\" (commit 7ab1c22).\n\n- Size: +180 / -41 across 5 files\n- Commits: 7ab1c22, 0de4f19\n- Files: 5 (1 shared). Source: src/pantry/log.py (new), src/pantry/worker.py (shared with F4)\n- Depends on: none\n- Fit: aligned. CONTRIBUTING.md:31 asks for \"machine-readable logs where practical\".\n- Status: landed: harvest/structured-json-logging", "order": 0}, {"id": "F2", "title": "Layered TOML config loader", "kind": "feature", "description": "Config is read from /etc, then the user directory, then the working directory, each layer overriding the last.", "why": "\"ops wanted per-host overrides without editing the shipped file\" (commit 3c9d8e0).", "size": "+210 / -66 across 4 files", "commits": "3c9d8e0, b4417ad", "files": "4 (2 shared). Source: src/pantry/config.py (shared with F14, F16), src/pantry/cli.py", "depends_raw": "none", "depends": [], "fit_raw": "aligned. README.md:58 lists \"files in /etc\" as supported config; layering is a small extension.", "fit": "aligned", "status_raw": "open", "status": {"kind": "open"}, "notes": [], "notes_inline": "", "raw": "### F2. Layered TOML config loader\n\nConfig is read from /etc, then the user directory, then the working directory, each layer overriding the last.\nWhy: \"ops wanted per-host overrides without editing the shipped file\" (commit 3c9d8e0).\n\n- Size: +210 / -66 across 4 files\n- Commits: 3c9d8e0, b4417ad\n- Files: 4 (2 shared). Source: src/pantry/config.py (shared with F14, F16), src/pantry/cli.py\n- Depends on: none\n- Fit: aligned. README.md:58 lists \"files in /etc\" as supported config; layering is a small extension.\n- Status: open", "order": 1}, {"id": "F3", "title": "Persist job records in SQLite", "kind": "feature", "description": "Job state survives a daemon restart because it is stored in a SQLite file instead of an in-memory dict.", "why": "\"jobs were lost on every deploy\" (commit 91fe0b3).", "size": "+520 / -88 across 9 files", "commits": "91fe0b3, a77c4de, 2d0e8b9", "files": "9 (3 shared). Source: src/pantry/store.py (new), src/pantry/queue.py (shared with F6, F13), src/pantry/models.py", "depends_raw": "F2 (reads the database path from the layered config)", "depends": ["F2"], "fit_raw": "tension. ADR-002 says \"job state is in memory; durability is the caller's problem\".", "fit": "tension", "status_raw": "open", "status": {"kind": "open"}, "notes": [], "notes_inline": "", "raw": "### F3. Persist job records in SQLite\n\nJob state survives a daemon restart because it is stored in a SQLite file instead of an in-memory dict.\nWhy: \"jobs were lost on every deploy\" (commit 91fe0b3).\n\n- Size: +520 / -88 across 9 files\n- Commits: 91fe0b3, a77c4de, 2d0e8b9\n- Files: 9 (3 shared). Source: src/pantry/store.py (new), src/pantry/queue.py (shared with F6, F13), src/pantry/models.py\n- Depends on: F2 (reads the database path from the layered config)\n- Fit: tension. ADR-002 says \"job state is in memory; durability is the caller's problem\".\n- Status: open", "order": 2}, {"id": "F4", "title": "Retry failed jobs with exponential backoff", "kind": "feature", "description": "Jobs that fail are retried up to five times with growing delays, instead of being dropped.", "why": "\"flaky downstreams drop work silently\" (commit c3a90e5).", "size": "+240 / -12 across 6 files", "commits": "c3a90e5, e4f5a6b (partial: src/pantry/queue.py)", "files": "6 (2 shared). Source: src/pantry/retry.py (new), src/pantry/queue.py (shared with F3)", "depends_raw": "F3 (attempt counts live in the job table), F1 (adds `_retry_delay` to F1's log context)", "depends": ["F3", "F1"], "fit_raw": "tension. Adds a background timer thread; ADR-004 says the worker is single-threaded.", "fit": "tension", "status_raw": "open", "status": {"kind": "open"}, "notes": [{"date": "2026-10-02", "kind": "question", "round": null, "qid": null, "text": "Does the retry timer really need its own thread?", "answer": "It only runs the backoff sleep (retry.py:40-88). Base's worker already has a scheduled-job queue (worker/jobs.py:12), so a retry could re-enqueue itself with a delay and ADR-004 stays intact."}], "notes_inline": "", "raw": "### F4. Retry failed jobs with exponential backoff\n\nJobs that fail are retried up to five times with growing delays, instead of being dropped.\nWhy: \"flaky downstreams drop work silently\" (commit c3a90e5).\n\n- Size: +240 / -12 across 6 files\n- Commits: c3a90e5, e4f5a6b (partial: src/pantry/queue.py)\n- Files: 6 (2 shared). Source: src/pantry/retry.py (new), src/pantry/queue.py (shared with F3)\n- Depends on: F3 (attempt counts live in the job table), F1 (adds `_retry_delay` to F1's log context)\n- Fit: tension. Adds a background timer thread; ADR-004 says the worker is single-threaded.\n- Status: open\n- Notes:\n  - 2026-10-02 Q: Does the retry timer really need its own thread? A: It only runs the backoff sleep (retry.py:40-88). Base's worker already has a scheduled-job queue (worker/jobs.py:12), so a retry could re-enqueue itself with a delay and ADR-004 stays intact.", "order": 3}, {"id": "F5", "title": "Dead-letter queue for exhausted retries", "kind": "feature", "description": "Jobs that use up their retries are parked in a dead-letter table where an operator can inspect and replay them.", "why": "\"we kept losing the jobs that mattered most\" (commit 5f1be27).", "size": "+160 / -4 across 3 files", "commits": "5f1be27", "files": "3 (1 shared). Source: src/pantry/deadletter.py (new), src/pantry/retry.py (shared with F4)", "depends_raw": "F4 (hooks the retry-exhausted event), F3 (dead letters are rows in the job table)", "depends": ["F4", "F3"], "fit_raw": "aligned. docs/design.md:44 already names a \"dead letter\" as a future concept.", "fit": "aligned", "status_raw": "open", "status": {"kind": "open"}, "notes": [], "notes_inline": "", "raw": "### F5. Dead-letter queue for exhausted retries\n\nJobs that use up their retries are parked in a dead-letter table where an operator can inspect and replay them.\nWhy: \"we kept losing the jobs that mattered most\" (commit 5f1be27).\n\n- Size: +160 / -4 across 3 files\n- Commits: 5f1be27\n- Files: 3 (1 shared). Source: src/pantry/deadletter.py (new), src/pantry/retry.py (shared with F4)\n- Depends on: F4 (hooks the retry-exhausted event), F3 (dead letters are rows in the job table)\n- Fit: aligned. docs/design.md:44 already names a \"dead letter\" as a future concept.\n- Status: open", "order": 4}, {"id": "F6", "title": "Priority lanes (high, normal, low)", "kind": "feature", "description": "Jobs carry a priority and workers drain high before normal before low, instead of strict arrival order.", "why": "\"billing jobs queued behind a 40,000-row export\" (commit 08ac6d1).", "size": "+130 / -30 across 4 files", "commits": "08ac6d1, 1b7e33f", "files": "4 (1 shared). Source: src/pantry/queue.py (shared with F3), src/pantry/priority.py (new)", "depends_raw": "F3 (priority is a column on the job row)", "depends": ["F3"], "fit_raw": "aligned. README.md:72 lists \"ordering\" as an extension point.", "fit": "aligned", "status_raw": "open", "status": {"kind": "open"}, "notes": [], "notes_inline": "", "raw": "### F6. Priority lanes (high, normal, low)\n\nJobs carry a priority and workers drain high before normal before low, instead of strict arrival order.\nWhy: \"billing jobs queued behind a 40,000-row export\" (commit 08ac6d1).\n\n- Size: +130 / -30 across 4 files\n- Commits: 08ac6d1, 1b7e33f\n- Files: 4 (1 shared). Source: src/pantry/queue.py (shared with F3), src/pantry/priority.py (new)\n- Depends on: F3 (priority is a column on the job row)\n- Fit: aligned. README.md:72 lists \"ordering\" as an extension point.\n- Status: open", "order": 5}, {"id": "F7", "title": "Per-queue concurrency limits", "kind": "feature", "description": "Each named queue can cap how many of its jobs run at once, instead of one global worker count.", "why": "\"one noisy queue starves the rest\" (commit d19e840).", "size": "+95 / -22 across 3 files", "commits": "d19e840", "files": "3 (2 shared). Source: src/pantry/worker.py (shared with F1, F8), src/pantry/config.py (shared with F2)", "depends_raw": "F2 (limits are configured per queue), F6 (limits apply per lane)", "depends": ["F2", "F6"], "fit_raw": "tension. ADR-004's single-threaded worker has no notion of concurrent jobs; this assumes a thread pool.", "fit": "tension", "status_raw": "open", "status": {"kind": "open"}, "notes": [], "notes_inline": "", "raw": "### F7. Per-queue concurrency limits\n\nEach named queue can cap how many of its jobs run at once, instead of one global worker count.\nWhy: \"one noisy queue starves the rest\" (commit d19e840).\n\n- Size: +95 / -22 across 3 files\n- Commits: d19e840\n- Files: 3 (2 shared). Source: src/pantry/worker.py (shared with F1, F8), src/pantry/config.py (shared with F2)\n- Depends on: F2 (limits are configured per queue), F6 (limits apply per lane)\n- Fit: tension. ADR-004's single-threaded worker has no notion of concurrent jobs; this assumes a thread pool.\n- Status: open", "order": 6}, {"id": "F8", "title": "Graceful shutdown drains in-flight jobs", "kind": "feature", "description": "On SIGTERM the daemon stops taking new jobs and waits for running ones to finish, up to a configurable grace period.", "why": "\"deploys killed jobs halfway through\" (commit 6e2d415).", "size": "+85 / -9 across 3 files", "commits": "6e2d415", "files": "3 (1 shared). Source: src/pantry/shutdown.py (new), src/pantry/worker.py (shared with F1, F7)", "depends_raw": "none", "depends": [], "fit_raw": "aligned. CONTRIBUTING.md:19 asks that long-running processes handle SIGTERM.", "fit": "aligned", "status_raw": "picked: cherry-pick, batch: shutdown", "status": {"kind": "picked", "mode": "cherry-pick", "batch": "shutdown"}, "notes": [], "notes_inline": "", "raw": "### F8. Graceful shutdown drains in-flight jobs\n\nOn SIGTERM the daemon stops taking new jobs and waits for running ones to finish, up to a configurable grace period.\nWhy: \"deploys killed jobs halfway through\" (commit 6e2d415).\n\n- Size: +85 / -9 across 3 files\n- Commits: 6e2d415\n- Files: 3 (1 shared). Source: src/pantry/shutdown.py (new), src/pantry/worker.py (shared with F1, F7)\n- Depends on: none\n- Fit: aligned. CONTRIBUTING.md:19 asks that long-running processes handle SIGTERM.\n- Status: picked: cherry-pick, batch: shutdown", "order": 7}, {"id": "F9", "title": "Health endpoint", "kind": "feature", "description": "`GET /healthz` returns 200 while the worker loop is alive and 503 once it stalls, for load balancers and orchestrators.", "why": "\"the orchestrator could not tell a stuck daemon from a busy one\" (commit f0a1c93).", "size": "+70 / -0 across 2 files", "commits": "f0a1c93", "files": "2 (0 shared). Source: src/pantry/health.py (new), src/pantry/http.py", "depends_raw": "F1 (uses the request-id middleware)", "depends": ["F1"], "fit_raw": "aligned. README.md:90 says \"a health check is welcome\".", "fit": "aligned", "status_raw": "open", "status": {"kind": "open"}, "notes": [], "notes_inline": "", "raw": "### F9. Health endpoint\n\n`GET /healthz` returns 200 while the worker loop is alive and 503 once it stalls, for load balancers and orchestrators.\nWhy: \"the orchestrator could not tell a stuck daemon from a busy one\" (commit f0a1c93).\n\n- Size: +70 / -0 across 2 files\n- Commits: f0a1c93\n- Files: 2 (0 shared). Source: src/pantry/health.py (new), src/pantry/http.py\n- Depends on: F1 (uses the request-id middleware)\n- Fit: aligned. README.md:90 says \"a health check is welcome\".\n- Status: open", "order": 8}, {"id": "F10", "title": "Prometheus metrics endpoint", "kind": "feature", "description": "`GET /metrics` exposes queue depth, job durations and failure counts in Prometheus text format.", "why": "unstated.", "size": "+190 / -6 across 4 files", "commits": "44cd02e, 9be5f71", "files": "4 (1 shared). Source: src/pantry/metrics.py (new), src/pantry/http.py (shared with F9)", "depends_raw": "F9 (registers on the same HTTP server), F1", "depends": ["F9", "F1"], "fit_raw": "tension. CONTRIBUTING.md:44 says new runtime dependencies need an ADR; this adds `prometheus-client`.", "fit": "tension", "status_raw": "open", "status": {"kind": "open"}, "notes": [], "notes_inline": "", "raw": "### F10. Prometheus metrics endpoint\n\n`GET /metrics` exposes queue depth, job durations and failure counts in Prometheus text format.\nWhy: unstated.\n\n- Size: +190 / -6 across 4 files\n- Commits: 44cd02e, 9be5f71\n- Files: 4 (1 shared). Source: src/pantry/metrics.py (new), src/pantry/http.py (shared with F9)\n- Depends on: F9 (registers on the same HTTP server), F1\n- Fit: tension. CONTRIBUTING.md:44 says new runtime dependencies need an ADR; this adds `prometheus-client`.\n- Status: open", "order": 9}, {"id": "F11", "title": "Admin CLI for jobs", "kind": "feature", "description": "`pantryctl jobs list|show|retry|cancel` lets an operator inspect and act on jobs from a shell.", "why": "\"we were running SQL by hand\" (commit b82f6a4).", "size": "+310 / -0 across 5 files", "commits": "b82f6a4, 73e9d0c", "files": "5 (1 shared). Source: src/pantryctl/ (new), src/pantry/cli.py (shared with F2)", "depends_raw": "F3 (reads the job table), F5 (the `retry` subcommand replays dead letters)", "depends": ["F3", "F5"], "fit_raw": "aligned. docs/design.md:61 sketches a control CLI.", "fit": "aligned", "status_raw": "open", "status": {"kind": "open"}, "notes": [], "notes_inline": "", "raw": "### F11. Admin CLI for jobs\n\n`pantryctl jobs list|show|retry|cancel` lets an operator inspect and act on jobs from a shell.\nWhy: \"we were running SQL by hand\" (commit b82f6a4).\n\n- Size: +310 / -0 across 5 files\n- Commits: b82f6a4, 73e9d0c\n- Files: 5 (1 shared). Source: src/pantryctl/ (new), src/pantry/cli.py (shared with F2)\n- Depends on: F3 (reads the job table), F5 (the `retry` subcommand replays dead letters)\n- Fit: aligned. docs/design.md:61 sketches a control CLI.\n- Status: open", "order": 10}, {"id": "F12", "title": "Web admin UI", "kind": "feature", "description": "A small single-page web app lists queues and jobs, with buttons to retry and cancel, served from the daemon itself.", "why": "\"the CLI is not for the support team\" (commit e61f3b8).", "size": "+1,420 / -0 across 22 files", "commits": "e61f3b8, 02d7aa4, c5b9e61", "files": "22 (1 shared). Source: web/ (new), src/pantry/http.py (shared with F9, F10)", "depends_raw": "F11 (calls the same actions), F10 (draws charts from /metrics)", "depends": ["F11", "F10"], "fit_raw": "conflict. README.md:12 states \"no web UI; the daemon is headless by design\".", "fit": "conflict", "status_raw": "open", "status": {"kind": "open"}, "notes": [], "notes_inline": "", "raw": "### F12. Web admin UI\n\nA small single-page web app lists queues and jobs, with buttons to retry and cancel, served from the daemon itself.\nWhy: \"the CLI is not for the support team\" (commit e61f3b8).\n\n- Size: +1,420 / -0 across 22 files\n- Commits: e61f3b8, 02d7aa4, c5b9e61\n- Files: 22 (1 shared). Source: web/ (new), src/pantry/http.py (shared with F9, F10)\n- Depends on: F11 (calls the same actions), F10 (draws charts from /metrics)\n- Fit: conflict. README.md:12 states \"no web UI; the daemon is headless by design\".\n- Status: open", "order": 11}, {"id": "F13", "title": "Scheduled (cron-style) jobs", "kind": "feature", "description": "A job can be registered with a cron expression and the daemon enqueues it on schedule, instead of relying on an external cron.", "why": "\"cron on three hosts fired the same job three times\" (commit 1ae48d7).", "size": "+260 / -14 across 5 files", "commits": "1ae48d7, 8d03fb6", "files": "5 (2 shared). Source: src/pantry/schedule.py (new), src/pantry/queue.py (shared with F3, F6)", "depends_raw": "F3 (schedule state is persisted), F6 (scheduled jobs pick a lane)", "depends": ["F3", "F6"], "fit_raw": "tension. ADR-005 says \"scheduling is the caller's job\".", "fit": "tension", "status_raw": "open", "status": {"kind": "open"}, "notes": [], "notes_inline": "", "raw": "### F13. Scheduled (cron-style) jobs\n\nA job can be registered with a cron expression and the daemon enqueues it on schedule, instead of relying on an external cron.\nWhy: \"cron on three hosts fired the same job three times\" (commit 1ae48d7).\n\n- Size: +260 / -14 across 5 files\n- Commits: 1ae48d7, 8d03fb6\n- Files: 5 (2 shared). Source: src/pantry/schedule.py (new), src/pantry/queue.py (shared with F3, F6)\n- Depends on: F3 (schedule state is persisted), F6 (scheduled jobs pick a lane)\n- Fit: tension. ADR-005 says \"scheduling is the caller's job\".\n- Status: open", "order": 12}, {"id": "F14", "title": "Signed job payloads (HMAC)", "kind": "feature", "description": "Payloads are signed when enqueued and verified before running, so a tampered row is rejected.", "why": "\"the queue file is world-readable on shared hosts\" (commit a2e07c8).", "size": "+120 / -3 across 3 files", "commits": "a2e07c8", "files": "3 (1 shared). Source: src/pantry/signing.py (new), src/pantry/config.py (shared with F2)", "depends_raw": "F2 (the signing key comes from config)", "depends": ["F2"], "fit_raw": "aligned. CONTRIBUTING.md:52 asks for integrity checks on persisted data.", "fit": "aligned", "status_raw": "left", "status": {"kind": "left"}, "notes": [], "notes_inline": "", "raw": "### F14. Signed job payloads (HMAC)\n\nPayloads are signed when enqueued and verified before running, so a tampered row is rejected.\nWhy: \"the queue file is world-readable on shared hosts\" (commit a2e07c8).\n\n- Size: +120 / -3 across 3 files\n- Commits: a2e07c8\n- Files: 3 (1 shared). Source: src/pantry/signing.py (new), src/pantry/config.py (shared with F2)\n- Depends on: F2 (the signing key comes from config)\n- Fit: aligned. CONTRIBUTING.md:52 asks for integrity checks on persisted data.\n- Status: left", "order": 13}, {"id": "F15", "title": "Job timeouts with cancellation", "kind": "feature", "description": "A job that runs past its timeout is cancelled cooperatively, and killed if it ignores the cancellation.", "why": "\"a hung job held a worker slot for nine days\" (commit 37b5d1e).", "size": "+175 / -20 across 4 files", "commits": "37b5d1e, c0f9a42", "files": "4 (2 shared). Source: src/pantry/timeout.py (new), src/pantry/worker.py (shared with F1, F7, F8)", "depends_raw": "F8 (reuses the drain/cancel path), F4 (a timeout counts as a failed attempt)", "depends": ["F8", "F4"], "fit_raw": "tension. Cooperative cancellation needs a second thread; ADR-004.", "fit": "tension", "status_raw": "open", "status": {"kind": "open"}, "notes": [], "notes_inline": "", "raw": "### F15. Job timeouts with cancellation\n\nA job that runs past its timeout is cancelled cooperatively, and killed if it ignores the cancellation.\nWhy: \"a hung job held a worker slot for nine days\" (commit 37b5d1e).\n\n- Size: +175 / -20 across 4 files\n- Commits: 37b5d1e, c0f9a42\n- Files: 4 (2 shared). Source: src/pantry/timeout.py (new), src/pantry/worker.py (shared with F1, F7, F8)\n- Depends on: F8 (reuses the drain/cancel path), F4 (a timeout counts as a failed attempt)\n- Fit: tension. Cooperative cancellation needs a second thread; ADR-004.\n- Status: open", "order": 14}, {"id": "F16", "title": "Webhook notification when a job dead-letters", "kind": "feature", "description": "An operator-configured URL receives a POST with the job summary when a job lands in the dead-letter table.", "why": "\"we found dead jobs a week late\" (commit 9d44e6b).", "size": "+110 / -0 across 3 files", "commits": "9d44e6b", "files": "3 (1 shared). Source: src/pantry/notify.py (new), src/pantry/config.py (shared with F2)", "depends_raw": "F5 (fires on the dead-letter event), F2 (URL from config), F1 (line to edit: log context in `notify._post`)", "depends": ["F5", "F2", "F1"], "fit_raw": "aligned. README.md:95 mentions \"outgoing hooks\" as welcome.", "fit": "aligned", "status_raw": "open", "status": {"kind": "open"}, "notes": [{"date": "2026-10-02", "kind": "note", "round": null, "qid": null, "text": "A shared secret for the webhook is stored in plain config; check whether F14's signing key can be reused."}], "notes_inline": "", "raw": "### F16. Webhook notification when a job dead-letters\n\nAn operator-configured URL receives a POST with the job summary when a job lands in the dead-letter table.\nWhy: \"we found dead jobs a week late\" (commit 9d44e6b).\n\n- Size: +110 / -0 across 3 files\n- Commits: 9d44e6b\n- Files: 3 (1 shared). Source: src/pantry/notify.py (new), src/pantry/config.py (shared with F2)\n- Depends on: F5 (fires on the dead-letter event), F2 (URL from config), F1 (line to edit: log context in `notify._post`)\n- Fit: aligned. README.md:95 mentions \"outgoing hooks\" as welcome.\n- Status: open\n- Notes:\n  - 2026-10-02 Note: A shared secret for the webhook is stored in plain config; check whether F14's signing key can be reused.", "order": 15}, {"id": "F17", "title": "Multi-tenant namespaces", "kind": "feature", "description": "Queues, jobs and config can be scoped to a tenant name, and tenants cannot see each other's jobs.", "why": "\"we host three customers on one daemon\" (commit 55e1d0b).", "size": "+640 / -210 across 14 files", "commits": "55e1d0b, 61c8fa2, d7a03e9", "files": "14 (6 shared). Source: src/pantry/tenancy.py (new), src/pantry/store.py (shared with F3), src/pantry/config.py (shared with F2)", "depends_raw": "F3, F2, F7 (per-tenant concurrency)", "depends": ["F3", "F2", "F7"], "fit_raw": "conflict. README.md:12 and ADR-001 describe a single-tenant daemon; every public function would change.", "fit": "conflict", "status_raw": "open", "status": {"kind": "open"}, "notes": [], "notes_inline": "", "raw": "### F17. Multi-tenant namespaces\n\nQueues, jobs and config can be scoped to a tenant name, and tenants cannot see each other's jobs.\nWhy: \"we host three customers on one daemon\" (commit 55e1d0b).\n\n- Size: +640 / -210 across 14 files\n- Commits: 55e1d0b, 61c8fa2, d7a03e9\n- Files: 14 (6 shared). Source: src/pantry/tenancy.py (new), src/pantry/store.py (shared with F3), src/pantry/config.py (shared with F2)\n- Depends on: F3, F2, F7 (per-tenant concurrency)\n- Fit: conflict. README.md:12 and ADR-001 describe a single-tenant daemon; every public function would change.\n- Status: open", "order": 16}, {"id": "Plumbing", "title": "Dependency bumps, CI cache, renames", "kind": "plumbing", "description": "Formatting, lockfile updates, the CI cache key and a package rename, with no user-facing intent.", "why": "unstated.", "size": "+310 / -290 across 18 files", "commits": "1f0c2b7, 8a6d9e4, c71e0b3", "files": "18 (0 shared). Source: pyproject.toml, uv.lock, .github/workflows/ci.yml", "depends_raw": "none", "depends": [], "fit_raw": "aligned. Nothing here touches behaviour.", "fit": "aligned", "status_raw": "open", "status": {"kind": "open"}, "notes": [], "notes_inline": "", "raw": "### Plumbing. Dependency bumps, CI cache, renames\n\nFormatting, lockfile updates, the CI cache key and a package rename, with no user-facing intent.\nWhy: unstated.\n\n- Size: +310 / -290 across 18 files\n- Commits: 1f0c2b7, 8a6d9e4, c71e0b3\n- Files: 18 (0 shared). Source: pyproject.toml, uv.lock, .github/workflows/ci.yml\n- Depends on: none\n- Fit: aligned. Nothing here touches behaviour.\n- Status: open", "order": 17}, {"id": "Head-only", "title": "Fork docs, deployment config, persona", "kind": "headonly", "description": "The fork's own README banner, Kubernetes manifests and deploy scripts.", "why": "unstated.", "size": "+480 / -12 across 17 files", "commits": "2b9e7a0, f44d1c6", "files": "17 (0 shared). Source: deploy/**, FORK.md, README.md (banner only)", "depends_raw": "none", "depends": [], "fit_raw": "conflict. FORK.md:7 keeps deployment config off upstream.", "fit": "conflict", "status_raw": "open", "status": {"kind": "open"}, "notes": [], "notes_inline": "", "raw": "### Head-only. Fork docs, deployment config, persona\n\nThe fork's own README banner, Kubernetes manifests and deploy scripts.\nWhy: unstated.\n\n- Size: +480 / -12 across 17 files\n- Commits: 2b9e7a0, f44d1c6\n- Files: 17 (0 shared). Source: deploy/**, FORK.md, README.md (banner only)\n- Depends on: none\n- Fit: conflict. FORK.md:7 keeps deployment config off upstream.\n- Status: open", "order": 18}, {"id": "S1", "title": "Token-bucket rate limiter (rebuilt on upstream, merged back)", "kind": "setaside", "description": "The rate limiter the fork wrote was rebuilt onto upstream last month and merged back, so the fork's original commits show in the log.", "why": "\"limit abusive enqueuers\" (commit 4d8e2c1).", "size": "+140 / -0 across 3 files", "commits": "4d8e2c1, 90b3ae7", "files": "3 (0 shared). Source: src/pantry/ratelimit.py", "depends_raw": "none", "depends": [], "fit_raw": "aligned. Already on base.", "fit": "aligned", "status_raw": "landed: already on base", "status": {"kind": "landed", "branch": "already on base", "on_base": true}, "notes": [{"kind": "plain", "text": "Evidence: upstream/main src/pantry/ratelimit.py has the same bucket logic (merge 5aa3c10); pass 3."}], "notes_inline": "", "raw": "### S1. Token-bucket rate limiter (rebuilt on upstream, merged back)\n\nThe rate limiter the fork wrote was rebuilt onto upstream last month and merged back, so the fork's original commits show in the log.\nWhy: \"limit abusive enqueuers\" (commit 4d8e2c1).\n\n- Size: +140 / -0 across 3 files\n- Commits: 4d8e2c1, 90b3ae7\n- Files: 3 (0 shared). Source: src/pantry/ratelimit.py\n- Depends on: none\n- Fit: aligned. Already on base.\n- Status: landed: already on base\n- Notes:\n  - Evidence: upstream/main src/pantry/ratelimit.py has the same bucket logic (merge 5aa3c10); pass 3.", "order": 19}, {"id": "S2", "title": "`--version` flag", "kind": "setaside", "description": "`pantry --version` prints the package version.", "why": "unstated.", "size": "+12 / -0 across 1 file", "commits": "6c1d0fa", "files": "1 (0 shared). Source: src/pantry/cli.py", "depends_raw": "none", "depends": [], "fit_raw": "aligned. Already on base.", "fit": "aligned", "status_raw": "landed: already on base", "status": {"kind": "landed", "branch": "already on base", "on_base": true}, "notes": [{"kind": "plain", "text": "Evidence: patch-equivalent commit on base (pass 1, `git log --cherry-pick`)."}], "notes_inline": "", "raw": "### S2. `--version` flag\n\n`pantry --version` prints the package version.\nWhy: unstated.\n\n- Size: +12 / -0 across 1 file\n- Commits: 6c1d0fa\n- Files: 1 (0 shared). Source: src/pantry/cli.py\n- Depends on: none\n- Fit: aligned. Already on base.\n- Status: landed: already on base\n- Notes:\n  - Evidence: patch-equivalent commit on base (pass 1, `git log --cherry-pick`).", "order": 20}]}</script>
+<script>
+"use strict";
+const DATA = JSON.parse(document.getElementById('harvest-data').textContent);
+const M = DATA.meta, E = DATA.entries, PENDING = DATA.pending || {};
+const byId = Object.fromEntries(E.map(e => [e.id, e]));
+const dependents = {};
+E.forEach(e => e.depends.forEach(d => (dependents[d] = dependents[d] || []).push(e.id)));
+const KEY = 'harvest-report:' + (M.head_sha || M.ledger_name) + ':r' + M.round;
+const MODES = ['cherry-pick', 'rework', 'rebuild'];
+const $ = s => document.querySelector(s);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+// ---- state: the human's marks, separate from the ledger --------------------------------------
+let S = {entries: {}, general: '', nextQ: 1};
+const ui = {open: new Set(), filter: 'all', drafts: {}, kinds: {}, lsOk: true, notices: [],
+            fsa: {handle: null, state: 'none', last: null, err: null}, savedAt: null};
+
+const ledgerEff = e => {
+  const s = e.status;
+  return s.kind === 'picked' ? {kind: 'picked', mode: s.mode, batch: s.batch || null}
+       : {kind: s.kind};
+};
+function eff(e) {
+  const led = ledgerEff(e);
+  if (led.kind === 'landed') return led;
+  const st = S.entries[e.id];
+  let r = led;
+  if (st && st.mode !== undefined) {
+    r = st.mode === 'open' ? {kind: 'open'} : st.mode === 'left' ? {kind: 'left'}
+      : {kind: 'picked', mode: st.mode, batch: led.kind === 'picked' ? led.batch : null};
+  }
+  if (r.kind === 'picked' && st && st.batch !== undefined) r.batch = st.batch || null;
+  return r;
+}
+const defaultBatch = t => t.toLowerCase().replace(/[^a-z0-9\s-]/g, '').trim().split(/\s+/).slice(0, 4).join('-');
+const batchName = e => eff(e).batch || defaultBatch(e.title);
+const get = id => (S.entries[id] = S.entries[id] || {});
+function prune(id) {
+  const st = S.entries[id]; if (!st) return;
+  if (st.comments && !st.comments.length) delete st.comments;
+  if (st.cuts) { Object.keys(st.cuts).forEach(k => { if (!st.cuts[k].trim()) delete st.cuts[k]; }); if (!Object.keys(st.cuts).length) delete st.cuts; }
+  if (!Object.keys(st).length) delete S.entries[id];
+}
+function setMode(id, m) {
+  const e = byId[id], cur = eff(e), st = get(id), led = ledgerEff(e);
+  const same = (m === 'left' && cur.kind === 'left') || (cur.kind === 'picked' && cur.mode === m);
+  st.mode = same ? 'open' : m;
+  const now = st.mode === 'open' ? {kind: 'open'} : st.mode === 'left' ? {kind: 'left'} : {kind: 'picked', mode: st.mode};
+  if (now.kind === led.kind && now.mode === led.mode) delete st.mode;
+  prune(id);
+}
+function warnings() {
+  const w = [];
+  E.forEach(e => {
+    if (eff(e).kind !== 'picked') return;
+    e.depends.forEach(d => {
+      const k = eff(byId[d]).kind;
+      if (k === 'picked' || k === 'landed') return;
+      const how = ((S.entries[e.id] || {}).cuts || {})[d] || '';
+      w.push({from: e.id, dep: d, state: k, cut: how.trim()});
+    });
+  });
+  return w;
+}
+
+// ---- responses (see responses.schema.md) ------------------------------------------------------
+function buildResponses() {
+  const out = {};
+  E.forEach(e => {
+    const st = S.entries[e.id]; if (!st) return;
+    const o = {title: e.title, status: e.status_raw}, led = ledgerEff(e);
+    if (led.kind !== 'landed') {
+      const cur = eff(e);
+      const modeChanged = cur.kind !== led.kind || cur.mode !== led.mode;
+      if (modeChanged) o.mode = cur.kind === 'picked' ? cur.mode : cur.kind;
+      if (cur.kind === 'picked' && (modeChanged || (cur.batch || null) !== (led.batch || null))) o.batch = cur.batch || null;
+    }
+    const cuts = Object.entries(st.cuts || {}).filter(([d, h]) => h.trim() && e.depends.includes(d)).map(([dep, how]) => ({dep, how: how.trim()}));
+    if (cuts.length) o.cuts = cuts;
+    if ((st.comments || []).length) o.comments = st.comments.map(c => ({id: c.id, kind: c.kind, text: c.text, created: c.created}));
+    if (Object.keys(o).length > 2) out[e.id] = o;
+  });
+  return {
+    schema: 'harvest-responses/1', round: M.round, created: new Date().toISOString(),
+    ledger: {name: M.ledger_name, sha256: M.ledger_sha256, head: M.head, head_sha: M.head_sha, base: M.base, base_sha: M.base_sha, updated: M.updated},
+    entries: out, general_notes: (S.general || '').trim()
+  };
+}
+const respText = () => JSON.stringify(buildResponses(), null, 2);
+
+// ---- persistence: localStorage draft, optional file via File System Access ---------------------
+function load() {
+  try {
+    const raw = localStorage.getItem(KEY); if (!raw) return;
+    const d = JSON.parse(raw);
+    S = Object.assign({entries: {}, general: '', nextQ: 1}, d.state);
+    const gone = Object.keys(S.entries).filter(id => !byId[id]);
+    gone.forEach(id => delete S.entries[id]);
+    if (d.ledger_sha256 !== M.ledger_sha256) ui.notices.push('This draft was started against a different render of the ledger' + (gone.length ? '; dropped marks for ' + gone.join(', ') + ' (no longer in the ledger)' : '') + '.');
+    ui.savedAt = d.saved;
+  } catch (err) { ui.lsOk = false; }
+}
+function persist() {
+  try {
+    ui.savedAt = new Date().toISOString();
+    localStorage.setItem(KEY, JSON.stringify({v: 1, ledger_sha256: M.ledger_sha256, saved: ui.savedAt, state: S}));
+    ui.lsOk = true;
+  } catch (err) { ui.lsOk = false; }
+  scheduleFsa();
+}
+const idb = {
+  open: () => new Promise((res, rej) => { const r = indexedDB.open('harvest-report', 1); r.onupgradeneeded = () => r.result.createObjectStore('h'); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }),
+  async get(k) { const db = await this.open(); return new Promise((res, rej) => { const q = db.transaction('h').objectStore('h').get(k); q.onsuccess = () => res(q.result); q.onerror = () => rej(q.error); }); },
+  async set(k, v) { const db = await this.open(); return new Promise((res, rej) => { const t = db.transaction('h', 'readwrite'); t.objectStore('h').put(v, k); t.oncomplete = () => res(); t.onerror = () => rej(t.error); }); }
+};
+let fsaTimer = null;
+function scheduleFsa() { if (ui.fsa.state !== 'on') return; clearTimeout(fsaTimer); fsaTimer = setTimeout(fsaWrite, 500); }
+async function fsaWrite() {
+  try {
+    const w = await ui.fsa.handle.createWritable();
+    await w.write(respText()); await w.close();
+    ui.fsa.last = new Date(); ui.fsa.err = null;
+  } catch (err) { ui.fsa.err = String(err.message || err); ui.fsa.state = 'lost'; }
+  chrome();
+}
+async function fsaPick() {
+  try {
+    const h = await window.showSaveFilePicker({suggestedName: 'responses.json', types: [{description: 'JSON', accept: {'application/json': ['.json']}}]});
+    ui.fsa.handle = h; ui.fsa.state = 'on';
+    try { await idb.set(KEY, h); } catch (e) {}
+    await fsaWrite();
+  } catch (err) { if (err.name !== 'AbortError') { ui.fsa.err = String(err.message || err); } }
+  chrome();
+}
+async function fsaReconnect() {
+  try {
+    const p = await ui.fsa.handle.requestPermission({mode: 'readwrite'});
+    if (p === 'granted') { ui.fsa.state = 'on'; await fsaWrite(); }
+  } catch (err) { ui.fsa.err = String(err.message || err); }
+  chrome();
+}
+async function fsaRestore() {
+  if (!window.showSaveFilePicker) return;
+  try {
+    const h = await idb.get(KEY); if (!h) return;
+    ui.fsa.handle = h;
+    const p = await h.queryPermission({mode: 'readwrite'});
+    ui.fsa.state = p === 'granted' ? 'on' : 'ask';
+    if (ui.fsa.state === 'on') await fsaWrite();
+  } catch (err) { /* handle unusable: user can pick again */ }
+  chrome();
+}
+function importState(r) {
+  if (!r || r.schema !== 'harvest-responses/1') throw new Error('not a harvest-responses/1 file');
+  const ns = {entries: {}, general: r.general_notes || '', nextQ: 1};
+  let maxQ = 0;
+  Object.entries(r.entries || {}).forEach(([id, o]) => {
+    if (!byId[id]) { ui.notices.push('Import skipped ' + id + ': not in this ledger.'); return; }
+    const st = {};
+    if (o.mode) st.mode = o.mode;
+    if (o.batch !== undefined && o.batch !== null) st.batch = o.batch;
+    if (o.cuts && o.cuts.length) { st.cuts = {}; o.cuts.forEach(c => st.cuts[c.dep] = c.how); }
+    if (o.comments && o.comments.length) {
+      st.comments = o.comments.slice();
+      o.comments.forEach(c => { const m = /\.q(\d+)$/.exec(c.id || ''); if (m) maxQ = Math.max(maxQ, +m[1]); });
+    }
+    ns.entries[id] = st;
+  });
+  ns.nextQ = maxQ + 1; S = ns;
+  if (r.round !== M.round) ui.notices.push('Imported a round-' + r.round + ' file into a round-' + M.round + ' page.');
+  if (r.ledger && r.ledger.sha256 !== M.ledger_sha256) ui.notices.push('Imported file was made against a different render of the ledger.');
+}
+
+// ---- rendering --------------------------------------------------------------------------------
+const stLabel = (e, f) => f.kind === 'landed' ? (e.status.on_base ? 'set aside · on base' : 'landed · ' + e.status.branch)
+  : f.kind === 'picked' ? 'picked · ' + f.mode : f.kind;
+function chipFor(id) {
+  const k = eff(byId[id]).kind;
+  return '<button class="chip ' + (k === 'open' ? '' : k) + '" data-act="jump" data-id="' + id + '" title="' + esc(byId[id].title + ' (' + k + ')') + '">' + id + '</button>';
+}
+function rowHTML(e, W) {
+  const f = eff(e), led = ledgerEff(e), st = S.entries[e.id] || {};
+  const open = ui.open.has(e.id), ws = W.filter(w => w.from === e.id), needed = W.filter(w => w.dep === e.id);
+  const unresolved = ws.filter(w => !w.cut).length;
+  const cm = st.comments || [], nq = cm.filter(c => c.kind === 'question').length, nn = cm.length - nq;
+  const answered = e.notes.filter(n => n.answer).length;
+  const changed = f.kind !== led.kind || f.mode !== led.mode || (f.kind === 'picked' && (f.batch || null) !== (led.batch || null));
+  const cls = ['main', e.kind, f.kind, open ? 'open' : '', (unresolved || needed.length) ? 'haswarn' : ''].join(' ');
+  let tags = '';
+  if (unresolved) tags += '<span class="tag warn">needs ' + ws.filter(w => !w.cut).map(w => w.dep + ' (' + w.state + ')').join(', ') + '</span>';
+  if (needed.length) tags += '<span class="tag warn">' + (needed.every(w => w.cut) ? 'cut by ' : 'needed by picked ') + needed.map(w => w.from).join(', ') + '</span>';
+  if (nq) tags += '<span class="tag q">' + nq + ' question' + (nq > 1 ? 's' : '') + '</span>';
+  if (nn) tags += '<span class="tag q">' + nn + ' note' + (nn > 1 ? 's' : '') + '</span>';
+  if (answered) tags += '<span class="tag aligned">' + answered + ' answered</span>';
+  if ((PENDING[e.id] || []).some(p => !p.answer)) tags += '<span class="tag">awaiting answer</span>';
+  const neededBy = (dependents[e.id] || []);
+  let mark = '—';
+  if (led.kind !== 'landed') {
+    mark = '<div class="seg">' + MODES.map(m => '<button data-act="mode" data-id="' + e.id + '" data-m="' + m + '" aria-pressed="' + (f.kind === 'picked' && f.mode === m) + '">' + m + '</button>').join('')
+      + '<button class="left" data-act="mode" data-id="' + e.id + '" data-m="left" aria-pressed="' + (f.kind === 'left') + '">left</button>'
+      + (changed ? '<button data-act="reset" data-id="' + e.id + '" title="Back to the ledger\'s status: ' + esc(e.status_raw) + '">↺</button>' : '') + '</div>';
+  }
+  const batch = f.kind === 'picked'
+    ? '<div class="batch">batch <input type="text" list="batchlist" data-k="batch:' + e.id + '" value="' + esc(f.batch || '') + '" placeholder="' + esc(defaultBatch(e.title)) + '"></div>' : '';
+  const statusChip = '<span class="tag ' + (f.kind === 'landed' ? 'aligned' : '') + '">' + esc(stLabel(e, f)) + '</span>' + (changed ? ' <span class="tag" title="ledger: ' + esc(e.status_raw) + '">changed</span>' : '');
+  let h = '<tr class="' + cls + '" data-act="toggle" data-id="' + e.id + '" id="row-' + e.id + '">'
+    + '<td class="id">' + (open ? '▾ ' : '▸ ') + esc(e.id) + '</td>'
+    + '<td><div class="title">' + esc(e.title) + '</div><div class="desc">' + esc(e.description) + '</div>' + (tags ? '<div class="meta">' + tags + '</div>' : '') + '</td>'
+    + '<td><span class="tag ' + e.fit + '" title="' + esc(e.fit_raw) + '">' + e.fit + '</span></td>'
+    + '<td>' + (e.depends.length ? e.depends.map(chipFor).join('') : '<span class="empty">none</span>')
+    + (neededBy.length ? '<div class="needed">needed by ' + neededBy.join(', ') + '</div>' : '') + '</td>'
+    + '<td>' + statusChip + batch + '</td><td>' + mark + '</td></tr>';
+  if (open) h += detailHTML(e, W);
+  return h;
+}
+function detailHTML(e, W) {
+  const st = S.entries[e.id] || {}, ws = W.filter(w => w.from === e.id), needed = W.filter(w => w.dep === e.id);
+  const f = (k, v) => v ? '<dt>' + k + '</dt><dd>' + esc(v) + '</dd>' : '';
+  let left = '<h4>Ledger entry</h4><dl class="f">' + f('Why', e.why) + f('Size', e.size) + f('Commits', e.commits) + f('Files', e.files)
+    + f('Depends on', e.depends_raw)
+    + ((dependents[e.id] || []).length ? '<dt>Needed by</dt><dd>' + dependents[e.id].map(chipFor).join('') + '</dd>' : '')
+    + f('Fit', e.fit_raw) + f('Status', e.status_raw) + '</dl>';
+  const notes = e.notes, pend = (PENDING[e.id] || []);
+  if (notes.length || pend.length || e.notes_inline) {
+    left += '<h4 style="margin-top:14px">Earlier notes and answers</h4>';
+    notes.forEach(n => {
+      if (n.kind === 'question') left += '<div class="thread"><div><span class="tag q">Q</span> ' + esc(n.text) + '<time>' + esc(n.date) + (n.qid ? ' · ' + n.qid : '') + '</time></div>'
+        + (n.answer ? '<div class="a"><b>A</b> ' + esc(n.answer) + '</div>' : '<div class="a wait">no answer recorded</div>') + '</div>';
+      else left += '<div class="thread"><span class="tag">' + (n.kind === 'note' ? 'Note' : 'Ledger') + '</span> ' + esc(n.text) + (n.date ? '<time>' + esc(n.date) + '</time>' : '') + '</div>';
+    });
+    if (e.notes_inline) left += '<div class="thread">' + esc(e.notes_inline) + '</div>';
+    pend.forEach(p => left += '<div class="thread"><div><span class="tag q">Q</span> ' + esc(p.text) + '<time>round ' + p.round + ' · ' + esc(p.id) + '</time></div>'
+      + (p.answer ? '<div class="a"><b>A</b> ' + esc(p.answer) + '</div>' : '<div class="a wait">awaiting answer (not yet in the ledger)</div>') + '</div>');
+  }
+  left += '<details class="raw"><summary>Ledger text, verbatim</summary><pre>' + esc(e.raw) + '</pre></details>';
+
+  let right = '<h4>Your round-' + M.round + ' response</h4>';
+  ws.forEach(w => {
+    right += '<div class="warnbox' + (w.cut ? ' cut' : '') + '"><b>' + (w.cut ? 'Dependency cut: ' : 'Dependency not picked: ') + '</b>' + e.id + ' depends on ' + w.dep + ' (' + esc(byId[w.dep].title) + '), which is ' + w.state + '.'
+      + '<div class="cutrow">Or say how to cut it: <input type="text" data-k="cut:' + e.id + ':' + w.dep + '" value="' + esc(w.cut) + '" placeholder="e.g. stub the attempt counter, land without F4 hooks"></div></div>';
+  });
+  needed.forEach(w => right += '<div class="warnbox' + (w.cut ? ' cut' : '') + '">Picked <b>' + w.from + '</b> depends on this entry, which is ' + w.state + (w.cut ? ' (cut: ' + esc(w.cut) + ')' : '') + '.</div>');
+  (st.comments || []).forEach(c => right += '<div class="cm"><span class="tag q">' + (c.kind === 'question' ? 'Q' : 'Note') + '</span><div>' + esc(c.text) + '</div><button class="x" data-act="delc" data-id="' + e.id + '" data-cid="' + c.id + '" title="Delete">✕</button></div>');
+  const kind = ui.kinds[e.id] || 'question';
+  right += '<div class="composer"><textarea data-k="c:' + e.id + '" placeholder="Ask a question or leave a note. Ctrl+Enter to add.">' + esc(ui.drafts[e.id] || '') + '</textarea>'
+    + '<div class="crow"><label><input type="radio" name="k-' + e.id + '" data-act="kind" data-id="' + e.id + '" value="question"' + (kind === 'question' ? ' checked' : '') + '> question</label>'
+    + '<label><input type="radio" name="k-' + e.id + '" data-act="kind" data-id="' + e.id + '" value="note"' + (kind === 'note' ? ' checked' : '') + '> note</label>'
+    + '<span class="sp"></span><button class="btn" data-act="addc" data-id="' + e.id + '">Add</button></div></div>';
+  return '<tr class="detail"><td colspan="6"><div class="dgrid"><div>' + left + '</div><div>' + right + '</div></div></td></tr>';
+}
+function matches(e, W) {
+  const f = eff(e), st = S.entries[e.id] || {};
+  switch (ui.filter) {
+    case 'open': return f.kind === 'open';
+    case 'picked': return f.kind === 'picked';
+    case 'left': return f.kind === 'left';
+    case 'questions': return (st.comments || []).length > 0;
+    case 'warnings': return W.some(w => w.from === e.id || w.dep === e.id);
+    default: return true;
+  }
+}
+function batchesHTML() {
+  const groups = {};
+  E.forEach(e => { if (eff(e).kind === 'picked') (groups[batchName(e)] = groups[batchName(e)] || []).push(e); });
+  const names = Object.keys(groups);
+  $('#batchlist').innerHTML = [...new Set(names)].map(n => '<option value="' + esc(n) + '">').join('');
+  if (!names.length) return '<span class="empty">Nothing picked yet. Each pick defaults to its own branch, harvest/&lt;first four words of the title&gt;.</span>';
+  return names.map(n => {
+    const es = groups[n], info = [];
+    es.forEach(e => e.depends.forEach(d => {
+      const t = byId[d], ft = eff(t);
+      if (ft.kind === 'picked' && batchName(t) !== n) info.push(e.id + ' builds on ' + d + ' (batch ' + batchName(t) + '): land that one first');
+    }));
+    return '<div class="bt"><b>harvest/' + esc(n) + '</b> <span class="sub">' + es.length + ' feature' + (es.length > 1 ? 's' : '') + '</span>'
+      + es.map(e => '<div>' + e.id + ' <span class="sub">' + eff(e).mode + '</span> ' + esc(e.title) + '</div>').join('')
+      + info.map(i => '<div class="info">' + esc(i) + '</div>').join('') + '</div>';
+  }).join('');
+}
+function chrome() {
+  const W = warnings(), un = W.filter(w => !w.cut);
+  const feats = E.filter(e => e.kind !== 'setaside' && ledgerEff(e).kind !== 'landed');
+  const c = {picked: 0, left: 0, open: 0};
+  feats.forEach(e => c[eff(e).kind]++);
+  const landed = E.filter(e => ledgerEff(e).kind === 'landed' && e.kind !== 'setaside').length, aside = E.filter(e => e.kind === 'setaside').length;
+  const nq = Object.values(S.entries).reduce((n, s) => n + (s.comments || []).filter(x => x.kind === 'question').length, 0);
+  $('#counts').innerHTML = '<span class="pill">' + c.open + ' open</span><span class="pill">' + c.picked + ' picked</span><span class="pill">' + c.left + ' left</span><span class="pill">' + landed + ' landed</span><span class="pill">' + aside + ' set aside</span>'
+    + '<span class="pill">' + nq + ' question' + (nq === 1 ? '' : 's') + '</span>' + (un.length ? '<span class="pill warn">' + un.length + ' dependency warning' + (un.length > 1 ? 's' : '') + '</span>' : '');
+  $('#filters').innerHTML = [['all', 'All'], ['open', 'Open'], ['picked', 'Picked'], ['left', 'Left'], ['questions', 'With comments'], ['warnings', 'Warnings']]
+    .map(([k, l]) => '<button class="pill ' + (ui.filter === k ? 'on' : '') + '" data-act="filter" data-f="' + k + '">' + l + '</button>').join('');
+  const fs = ui.fsa;
+  $('#b-fsa').disabled = !window.showSaveFilePicker;
+  $('#b-fsa').title = window.showSaveFilePicker ? 'Write straight to a file you choose; rewritten on every change' : 'Not available in this browser (Chromium only)';
+  let s = ui.lsOk ? 'Draft saved in this browser' + (ui.savedAt ? ' · ' + new Date(ui.savedAt).toLocaleTimeString() : '') : 'Browser storage unavailable: export before closing';
+  if (fs.state === 'on') s += ' · writing to ' + (fs.handle && fs.handle.name) + (fs.last ? ' (' + fs.last.toLocaleTimeString() + ')' : '');
+  if (fs.state === 'ask') s += ' · <button class="btn" data-act="fsa-reconnect">Reconnect ' + esc(fs.handle.name) + '</button>';
+  if (fs.state === 'lost' || fs.err) s += ' · file write failed: ' + esc(fs.err);
+  $('#savestate').innerHTML = s;
+  const bn = [];
+  if (M.parse_warnings.length) bn.push('<div class="banner"><b>The ledger did not parse cleanly (' + M.parse_warnings.length + ').</b> Check these in the ledger file:<ul>' + M.parse_warnings.map(w => '<li>' + esc(w) + '</li>').join('') + '</ul></div>');
+  ui.notices.forEach(n => bn.push('<div class="banner">' + esc(n) + '</div>'));
+  $('#banners').innerHTML = bn.join('');
+  $('#batches').innerHTML = batchesHTML();
+}
+function render() {
+  const a = document.activeElement, key = a && a.dataset && a.dataset.k, pos = a && a.selectionStart;
+  const W = warnings(), groups = [['feature', 'Features, in dependency order'], ['plumbing', 'Plumbing'], ['headonly', 'Head-only'], ['setaside', 'Set aside: already on base']];
+  let h = '';
+  groups.forEach(([k, label]) => {
+    const rows = E.filter(e => e.kind === k && (matches(e, W) || ui.open.has(e.id)));
+    if (!rows.length) return;
+    h += '<tr class="grp"><td colspan="6">' + label + ' · ' + rows.length + '</td></tr>' + rows.map(e => rowHTML(e, W)).join('');
+  });
+  $('#tb').innerHTML = h || '<tr><td colspan="6" class="empty">Nothing matches this filter.</td></tr>';
+  chrome();
+  $('#general').value = S.general || '';
+  if (key) { const n = document.querySelector('[data-k="' + key + '"]'); if (n) { n.focus(); try { n.setSelectionRange(pos, pos); } catch (e) {} } }
+}
+function addComment(id) {
+  const t = (ui.drafts[id] || '').trim(); if (!t) return;
+  const st = get(id); st.comments = st.comments || [];
+  st.comments.push({id: 'r' + M.round + '.q' + S.nextQ++, kind: ui.kinds[id] || 'question', text: t, created: new Date().toISOString()});
+  ui.drafts[id] = ''; persist(); render();
+}
+
+// ---- events -----------------------------------------------------------------------------------
+document.addEventListener('click', ev => {
+  const t = ev.target.closest('[data-act]'); if (!t) return;
+  const act = t.dataset.act, id = t.dataset.id;
+  if (act === 'kind') return;
+  if (t.tagName === 'TR' && ev.target.closest('button,input,a,.chip')) return;   // controls inside a row do their own thing
+  ev.stopPropagation();
+  switch (act) {
+    case 'toggle': ui.open.has(id) ? ui.open.delete(id) : ui.open.add(id); render(); break;
+    case 'jump': ui.filter = 'all'; ui.open.add(id); render(); document.getElementById('row-' + id).scrollIntoView({block: 'center'}); break;
+    case 'mode': setMode(id, t.dataset.m); persist(); render(); break;
+    case 'reset': delete get(id).mode; delete get(id).batch; prune(id); persist(); render(); break;
+    case 'filter': ui.filter = t.dataset.f; render(); break;
+    case 'addc': addComment(id); break;
+    case 'delc': { const st = get(id); st.comments = st.comments.filter(c => c.id !== t.dataset.cid); prune(id); persist(); render(); break; }
+    case 'export': {
+      const b = new Blob([respText()], {type: 'application/json'}), a = document.createElement('a');
+      a.href = URL.createObjectURL(b); a.download = 'responses.json'; document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 1000); break;
+    }
+    case 'copy': copyResponses(); break;
+    case 'fsa': fsaPick(); break;
+    case 'fsa-reconnect': fsaReconnect(); break;
+    case 'import': $('#importfile').click(); break;
+    case 'resetdraft': if (confirm('Discard every mark, question and note on this page?')) { S = {entries: {}, general: '', nextQ: 1}; ui.drafts = {}; persist(); render(); } break;
+  }
+});
+document.addEventListener('change', ev => { const t = ev.target; if (t.dataset.act === 'kind') ui.kinds[t.dataset.id] = t.value; });
+document.addEventListener('input', ev => {
+  const k = ev.target.dataset && ev.target.dataset.k; if (!k) return;
+  const v = ev.target.value, p = k.split(':');
+  if (p[0] === 'general') S.general = v;
+  else if (p[0] === 'c') { ui.drafts[p[1]] = v; return; }
+  else if (p[0] === 'batch') { get(p[1]).batch = v; prune(p[1]); }
+  else if (p[0] === 'cut') { const st = get(p[1]); st.cuts = st.cuts || {}; st.cuts[p[2]] = v; }
+  persist(); render();
+});
+document.addEventListener('keydown', ev => {
+  if (ev.key === 'Enter' && (ev.ctrlKey || ev.metaKey) && ev.target.dataset && ev.target.dataset.k && ev.target.dataset.k.startsWith('c:')) addComment(ev.target.dataset.k.slice(2));
+});
+$('#importfile').addEventListener('change', async ev => {
+  const f = ev.target.files[0]; if (!f) return;
+  try { importState(JSON.parse(await f.text())); persist(); render(); } catch (err) { ui.notices.push('Import failed: ' + err.message); render(); }
+  ev.target.value = '';
+});
+async function copyResponses() {
+  const text = 'Harvest responses, round ' + M.round + ' (' + M.ledger_name + '):\n```json\n' + respText() + '\n```';
+  try { await navigator.clipboard.writeText(text); ui.copied = true; $('#savestate').textContent = 'Copied ' + text.length + ' characters. Paste into chat.'; return; } catch (e) {}
+  $('#modal').innerHTML = '<div class="modal"><div class="box"><p>Clipboard blocked. Select all and copy:</p><textarea id="mt" readonly></textarea><p><button class="btn" id="mclose">Close</button></p></div></div>';
+  $('#mt').value = text; $('#mt').select(); $('#mclose').onclick = () => $('#modal').innerHTML = '';
+}
+
+// ---- boot -------------------------------------------------------------------------------------
+document.title = 'Harvest report: ' + (M.head || '') + ' → ' + (M.base || '');
+$('#h-title').textContent = 'Harvest report: ' + M.head + ' → ' + M.base;
+$('#h-sub').textContent = 'Round ' + M.round + ' · ledger ' + M.ledger_name + ' · head ' + M.head_sha + ' · updated ' + M.updated + ' · ledger sha ' + M.ledger_sha256.slice(0, 10);
+load(); render(); fsaRestore();
+window.__harvest = {buildResponses, get state() { return S; }};
+</script>
+</body>
+</html>

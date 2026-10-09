@@ -1,0 +1,538 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Harvest report</title>
+<!--
+  PROTOTYPE: fixed template for the harvest review page. render_report.py replaces __HARVEST_DATA__
+  with the parsed ledger. The page never edits the ledger; it produces a responses file.
+  Offline, no CDN, no framework.
+-->
+<style>
+:root{
+  --bg:#f7f7f5; --panel:#fff; --ink:#1d1d1b; --mute:#6b6b66; --line:#e2e1dc; --accent:#3b4fd8; --accent-ink:#fff;
+  --accent-soft:#e8ebfc; --warn:#a15c00; --warn-bg:#fff3d6; --ok:#1d7a46; --ok-bg:#e3f4ea; --bad:#b3261e; --bad-bg:#fde8e6;
+  --shade:#f0efeb;
+}
+@media (prefers-color-scheme:dark){:root{
+  --bg:#17171a; --panel:#1f1f23; --ink:#ecebe6; --mute:#9a9a94; --line:#33333a; --accent:#8a98ff; --accent-ink:#0f1030;
+  --accent-soft:#272b4d; --warn:#f2b44d; --warn-bg:#3a2e12; --ok:#6fd49a; --ok-bg:#16301f; --bad:#ff8f86; --bad-bg:#3c1b19; --shade:#26262b;
+}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif}
+button,input,textarea,select{font:inherit;color:inherit}
+button{cursor:pointer}
+code,pre{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12.5px}
+.wrap{max-width:1320px;margin:0 auto;padding:0 20px 80px}
+header.top{position:sticky;top:0;z-index:10;background:var(--bg);border-bottom:1px solid var(--line);padding:10px 0}
+.top .row1{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:baseline;justify-content:space-between}
+h1{font-size:17px;margin:0}
+.sub{color:var(--mute);font-size:12.5px}
+.bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:8px}
+.btn{border:1px solid var(--line);background:var(--panel);border-radius:6px;padding:5px 11px}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn[disabled]{opacity:.45;cursor:not-allowed}
+.sp{flex:1}
+.counts{display:flex;gap:6px;flex-wrap:wrap}
+.pill{border:1px solid var(--line);border-radius:99px;padding:1px 9px;background:var(--panel);font-size:12.5px;white-space:nowrap}
+.pill.warn{background:var(--warn-bg);border-color:var(--warn);color:var(--warn)}
+.pill.on{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+button.pill{cursor:pointer}
+.savestate{font-size:12.5px;color:var(--mute)}
+.banner{margin:12px 0 0;padding:8px 12px;border-radius:6px;background:var(--warn-bg);color:var(--warn);border:1px solid var(--warn);font-size:13px}
+.banner ul{margin:4px 0 0 18px;padding:0}
+table{width:100%;border-collapse:collapse;table-layout:fixed;background:var(--panel);border:1px solid var(--line);border-radius:8px;margin-top:14px}
+th{font-size:11.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--mute);text-align:left;padding:7px 10px;border-bottom:1px solid var(--line);background:var(--shade)}
+td{padding:8px 10px;vertical-align:top;border-bottom:1px solid var(--line)}
+tr.grp td{background:var(--shade);font-size:11.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--mute);padding:5px 10px}
+tr.main{cursor:pointer}
+tr.main:hover td{background:color-mix(in srgb,var(--accent) 4%,var(--panel))}
+tr.main td:first-child{border-left:4px solid transparent}
+tr.picked td:first-child{border-left-color:var(--accent)}
+tr.landed td:first-child{border-left-color:var(--ok)}
+tr.left td:first-child{border-left-color:var(--mute)}
+tr.haswarn td:first-child{border-left-color:var(--warn)}
+tr.landed td,tr.setaside td{background-image:repeating-linear-gradient(135deg,transparent 0 7px,color-mix(in srgb,var(--ok) 6%,transparent) 7px 8px)}
+tr.landed .title,tr.setaside .title{color:var(--mute)}
+tr.left .title{color:var(--mute);text-decoration:line-through}
+.id{font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap}
+.title{font-weight:600}
+.desc{color:var(--mute);margin-top:1px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+tr.open .desc{display:block;-webkit-line-clamp:unset}
+.meta{margin-top:4px;display:flex;gap:6px;flex-wrap:wrap;font-size:12px}
+.tag{display:inline-block;max-width:100%;border-radius:4px;padding:0 6px;font-size:12px;border:1px solid var(--line);background:var(--shade);overflow-wrap:anywhere}
+.tag.aligned{background:var(--ok-bg);color:var(--ok);border-color:transparent}
+.tag.tension{background:var(--warn-bg);color:var(--warn);border-color:transparent}
+.tag.conflict{background:var(--bad-bg);color:var(--bad);border-color:transparent}
+.tag.warn{background:var(--warn-bg);color:var(--warn);border-color:var(--warn)}
+.tag.q{background:var(--accent-soft);color:var(--accent);border-color:transparent}
+.chip{border:1px solid var(--line);background:var(--panel);border-radius:4px;padding:0 6px;font-size:12px;margin:0 3px 3px 0;display:inline-block}
+.chip.landed{background:var(--ok-bg);color:var(--ok);border-color:transparent}
+.chip.picked{background:var(--accent-soft);color:var(--accent);border-color:transparent}
+.chip.left{color:var(--mute);text-decoration:line-through}
+.chip.bad{background:var(--warn-bg);color:var(--warn);border-color:var(--warn)}
+.needed{font-size:11.5px;color:var(--mute);margin-top:2px}
+.seg{display:flex;flex-wrap:wrap;gap:3px}
+.seg button{border:1px solid var(--line);background:var(--panel);border-radius:5px;padding:2px 7px;font-size:12.5px}
+.seg button[aria-pressed=true]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.seg button.left[aria-pressed=true]{background:var(--mute);border-color:var(--mute)}
+input[type=text],textarea{border:1px solid var(--line);background:var(--bg);border-radius:5px;padding:3px 7px;width:100%}
+input[type=text]:focus,textarea:focus{outline:2px solid var(--accent);outline-offset:-1px}
+.batch{margin-top:4px;display:flex;gap:4px;align-items:center;font-size:12px;color:var(--mute)}
+.batch input{padding:1px 5px;font-size:12.5px}
+tr.detail>td{background:var(--bg);padding:12px 14px 16px 18px;cursor:default}
+.dgrid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:18px}
+@media (max-width:980px){.dgrid{grid-template-columns:1fr}}
+.dgrid h4{margin:0 0 6px;font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--mute)}
+dl.f{margin:0;display:grid;grid-template-columns:90px 1fr;gap:3px 10px}
+dl.f dt{color:var(--mute)} dl.f dd{margin:0}
+.thread{border-left:3px solid var(--line);padding:2px 0 2px 10px;margin:0 0 10px}
+.thread .a{margin-top:3px;background:var(--ok-bg);border-radius:5px;padding:4px 8px}
+.thread .a.wait{background:var(--shade);color:var(--mute)}
+.thread time{color:var(--mute);font-size:12px;margin-left:6px}
+.cm{display:flex;gap:8px;align-items:flex-start;margin-bottom:6px;padding:5px 8px;background:var(--panel);border:1px solid var(--line);border-radius:6px}
+.cm .x{margin-left:auto;border:0;background:none;color:var(--mute)}
+.cm div{flex:1;white-space:pre-wrap}
+.warnbox{background:var(--warn-bg);border:1px solid var(--warn);color:var(--warn);border-radius:6px;padding:7px 10px;margin-bottom:10px}
+.warnbox.cut{background:var(--shade);border-color:var(--line);color:var(--ink)}
+.warnbox .cutrow{display:flex;gap:6px;align-items:center;margin-top:5px;color:var(--ink)}
+.composer{margin-top:8px}
+.composer textarea{min-height:54px;resize:vertical}
+.composer .crow{display:flex;gap:10px;align-items:center;margin-top:5px}
+details.raw{margin-top:10px} details.raw pre{white-space:pre-wrap;background:var(--shade);padding:8px;border-radius:5px;margin:6px 0 0}
+section.panel{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px 14px;margin-top:16px}
+section.panel h2{font-size:14px;margin:0 0 8px}
+.batches{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px}
+.bt{border:1px solid var(--line);border-radius:6px;padding:7px 10px}
+.bt b{font-size:13px}
+.bt .info{font-size:12px;color:var(--warn);margin-top:3px}
+.empty{color:var(--mute)}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:50}
+.modal .box{background:var(--panel);border-radius:8px;padding:16px;width:min(720px,92vw)}
+.modal textarea{height:300px;font-family:ui-monospace,monospace;font-size:12px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="row1">
+      <h1 id="h-title">Harvest report</h1>
+      <div class="sub" id="h-sub"></div>
+    </div>
+    <div class="bar">
+      <button class="btn primary" data-act="export" title="Download responses.json">Export responses.json</button>
+      <button class="btn" data-act="copy" title="Copy the responses as JSON to paste into chat">Copy responses</button>
+      <button class="btn" data-act="fsa" id="b-fsa" title="Write straight to a file you choose (Chromium)">Save to file…</button>
+      <button class="btn" data-act="import" title="Load a responses.json into this page">Import…</button>
+      <button class="btn" data-act="resetdraft" title="Discard this page's draft">Reset draft</button>
+      <input type="file" id="importfile" accept=".json,application/json" hidden>
+      <span class="savestate" id="savestate"></span>
+    </div>
+    <div class="bar">
+      <div class="counts" id="counts"></div>
+      <span class="sp"></span>
+      <div class="counts" id="filters"></div>
+    </div>
+  </header>
+  <div id="banners"></div>
+  <table id="tbl">
+    <colgroup><col style="width:92px"><col><col style="width:84px"><col style="width:150px"><col style="width:178px"><col style="width:236px"></colgroup>
+    <thead><tr><th>#</th><th>Feature</th><th>Fit</th><th>Depends on</th><th>Status</th><th>Mark</th></tr></thead>
+    <tbody id="tb"></tbody>
+  </table>
+  <section class="panel"><h2>Batches <span class="sub">(what the agent will land, from your marks)</span></h2><div class="batches" id="batches"></div></section>
+  <section class="panel"><h2>General notes</h2>
+    <textarea id="general" data-k="general" placeholder="Anything that is not about one entry: ordering preferences, things to check across features…" style="min-height:70px"></textarea>
+  </section>
+  <datalist id="batchlist"></datalist>
+</div>
+<div id="modal"></div>
+
+<script id="harvest-data" type="application/json">__HARVEST_DATA__</script>
+<script>
+"use strict";
+const DATA = JSON.parse(document.getElementById('harvest-data').textContent);
+const M = DATA.meta, E = DATA.entries, PENDING = DATA.pending || {};
+const byId = Object.fromEntries(E.map(e => [e.id, e]));
+const dependents = {};
+E.forEach(e => e.depends.forEach(d => (dependents[d] = dependents[d] || []).push(e.id)));
+const KEY = 'harvest-report:' + (M.head_sha || M.ledger_name) + ':r' + M.round;
+const MODES = ['cherry-pick', 'rework', 'rebuild'];
+const $ = s => document.querySelector(s);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+// ---- state: the human's marks, separate from the ledger --------------------------------------
+let S = {entries: {}, general: '', nextQ: 1};
+const ui = {open: new Set(), filter: 'all', drafts: {}, kinds: {}, lsOk: true, notices: [],
+            fsa: {handle: null, state: 'none', last: null, err: null}, savedAt: null};
+
+const ledgerEff = e => {
+  const s = e.status;
+  return s.kind === 'picked' ? {kind: 'picked', mode: s.mode, batch: s.batch || null}
+       : {kind: s.kind};
+};
+function eff(e) {
+  const led = ledgerEff(e);
+  if (led.kind === 'landed') return led;
+  const st = S.entries[e.id];
+  let r = led;
+  if (st && st.mode !== undefined) {
+    r = st.mode === 'open' ? {kind: 'open'} : st.mode === 'left' ? {kind: 'left'}
+      : {kind: 'picked', mode: st.mode, batch: led.kind === 'picked' ? led.batch : null};
+  }
+  if (r.kind === 'picked' && st && st.batch !== undefined) r.batch = st.batch || null;
+  return r;
+}
+const defaultBatch = t => t.toLowerCase().replace(/[^a-z0-9\s-]/g, '').trim().split(/\s+/).slice(0, 4).join('-');
+const batchName = e => eff(e).batch || defaultBatch(e.title);
+const get = id => (S.entries[id] = S.entries[id] || {});
+function prune(id) {
+  const st = S.entries[id]; if (!st) return;
+  if (st.comments && !st.comments.length) delete st.comments;
+  if (st.cuts) { Object.keys(st.cuts).forEach(k => { if (!st.cuts[k].trim()) delete st.cuts[k]; }); if (!Object.keys(st.cuts).length) delete st.cuts; }
+  if (!Object.keys(st).length) delete S.entries[id];
+}
+function setMode(id, m) {
+  const e = byId[id], cur = eff(e), st = get(id), led = ledgerEff(e);
+  const same = (m === 'left' && cur.kind === 'left') || (cur.kind === 'picked' && cur.mode === m);
+  st.mode = same ? 'open' : m;
+  const now = st.mode === 'open' ? {kind: 'open'} : st.mode === 'left' ? {kind: 'left'} : {kind: 'picked', mode: st.mode};
+  if (now.kind === led.kind && now.mode === led.mode) delete st.mode;
+  prune(id);
+}
+function warnings() {
+  const w = [];
+  E.forEach(e => {
+    if (eff(e).kind !== 'picked') return;
+    e.depends.forEach(d => {
+      const k = eff(byId[d]).kind;
+      if (k === 'picked' || k === 'landed') return;
+      const how = ((S.entries[e.id] || {}).cuts || {})[d] || '';
+      w.push({from: e.id, dep: d, state: k, cut: how.trim()});
+    });
+  });
+  return w;
+}
+
+// ---- responses (see responses.schema.md) ------------------------------------------------------
+function buildResponses() {
+  const out = {};
+  E.forEach(e => {
+    const st = S.entries[e.id]; if (!st) return;
+    const o = {title: e.title, status: e.status_raw}, led = ledgerEff(e);
+    if (led.kind !== 'landed') {
+      const cur = eff(e);
+      const modeChanged = cur.kind !== led.kind || cur.mode !== led.mode;
+      if (modeChanged) o.mode = cur.kind === 'picked' ? cur.mode : cur.kind;
+      if (cur.kind === 'picked' && (modeChanged || (cur.batch || null) !== (led.batch || null))) o.batch = cur.batch || null;
+    }
+    const cuts = Object.entries(st.cuts || {}).filter(([d, h]) => h.trim() && e.depends.includes(d)).map(([dep, how]) => ({dep, how: how.trim()}));
+    if (cuts.length) o.cuts = cuts;
+    if ((st.comments || []).length) o.comments = st.comments.map(c => ({id: c.id, kind: c.kind, text: c.text, created: c.created}));
+    if (Object.keys(o).length > 2) out[e.id] = o;
+  });
+  return {
+    schema: 'harvest-responses/1', round: M.round, created: new Date().toISOString(),
+    ledger: {name: M.ledger_name, sha256: M.ledger_sha256, head: M.head, head_sha: M.head_sha, base: M.base, base_sha: M.base_sha, updated: M.updated},
+    entries: out, general_notes: (S.general || '').trim()
+  };
+}
+const respText = () => JSON.stringify(buildResponses(), null, 2);
+
+// ---- persistence: localStorage draft, optional file via File System Access ---------------------
+function load() {
+  try {
+    const raw = localStorage.getItem(KEY); if (!raw) return;
+    const d = JSON.parse(raw);
+    S = Object.assign({entries: {}, general: '', nextQ: 1}, d.state);
+    const gone = Object.keys(S.entries).filter(id => !byId[id]);
+    gone.forEach(id => delete S.entries[id]);
+    if (d.ledger_sha256 !== M.ledger_sha256) ui.notices.push('This draft was started against a different render of the ledger' + (gone.length ? '; dropped marks for ' + gone.join(', ') + ' (no longer in the ledger)' : '') + '.');
+    ui.savedAt = d.saved;
+  } catch (err) { ui.lsOk = false; }
+}
+function persist() {
+  try {
+    ui.savedAt = new Date().toISOString();
+    localStorage.setItem(KEY, JSON.stringify({v: 1, ledger_sha256: M.ledger_sha256, saved: ui.savedAt, state: S}));
+    ui.lsOk = true;
+  } catch (err) { ui.lsOk = false; }
+  scheduleFsa();
+}
+const idb = {
+  open: () => new Promise((res, rej) => { const r = indexedDB.open('harvest-report', 1); r.onupgradeneeded = () => r.result.createObjectStore('h'); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }),
+  async get(k) { const db = await this.open(); return new Promise((res, rej) => { const q = db.transaction('h').objectStore('h').get(k); q.onsuccess = () => res(q.result); q.onerror = () => rej(q.error); }); },
+  async set(k, v) { const db = await this.open(); return new Promise((res, rej) => { const t = db.transaction('h', 'readwrite'); t.objectStore('h').put(v, k); t.oncomplete = () => res(); t.onerror = () => rej(t.error); }); }
+};
+let fsaTimer = null;
+function scheduleFsa() { if (ui.fsa.state !== 'on') return; clearTimeout(fsaTimer); fsaTimer = setTimeout(fsaWrite, 500); }
+async function fsaWrite() {
+  try {
+    const w = await ui.fsa.handle.createWritable();
+    await w.write(respText()); await w.close();
+    ui.fsa.last = new Date(); ui.fsa.err = null;
+  } catch (err) { ui.fsa.err = String(err.message || err); ui.fsa.state = 'lost'; }
+  chrome();
+}
+async function fsaPick() {
+  try {
+    const h = await window.showSaveFilePicker({suggestedName: 'responses.json', types: [{description: 'JSON', accept: {'application/json': ['.json']}}]});
+    ui.fsa.handle = h; ui.fsa.state = 'on';
+    try { await idb.set(KEY, h); } catch (e) {}
+    await fsaWrite();
+  } catch (err) { if (err.name !== 'AbortError') { ui.fsa.err = String(err.message || err); } }
+  chrome();
+}
+async function fsaReconnect() {
+  try {
+    const p = await ui.fsa.handle.requestPermission({mode: 'readwrite'});
+    if (p === 'granted') { ui.fsa.state = 'on'; await fsaWrite(); }
+  } catch (err) { ui.fsa.err = String(err.message || err); }
+  chrome();
+}
+async function fsaRestore() {
+  if (!window.showSaveFilePicker) return;
+  try {
+    const h = await idb.get(KEY); if (!h) return;
+    ui.fsa.handle = h;
+    const p = await h.queryPermission({mode: 'readwrite'});
+    ui.fsa.state = p === 'granted' ? 'on' : 'ask';
+    if (ui.fsa.state === 'on') await fsaWrite();
+  } catch (err) { /* handle unusable: user can pick again */ }
+  chrome();
+}
+function importState(r) {
+  if (!r || r.schema !== 'harvest-responses/1') throw new Error('not a harvest-responses/1 file');
+  const ns = {entries: {}, general: r.general_notes || '', nextQ: 1};
+  let maxQ = 0;
+  Object.entries(r.entries || {}).forEach(([id, o]) => {
+    if (!byId[id]) { ui.notices.push('Import skipped ' + id + ': not in this ledger.'); return; }
+    const st = {};
+    if (o.mode) st.mode = o.mode;
+    if (o.batch !== undefined && o.batch !== null) st.batch = o.batch;
+    if (o.cuts && o.cuts.length) { st.cuts = {}; o.cuts.forEach(c => st.cuts[c.dep] = c.how); }
+    if (o.comments && o.comments.length) {
+      st.comments = o.comments.slice();
+      o.comments.forEach(c => { const m = /\.q(\d+)$/.exec(c.id || ''); if (m) maxQ = Math.max(maxQ, +m[1]); });
+    }
+    ns.entries[id] = st;
+  });
+  ns.nextQ = maxQ + 1; S = ns;
+  if (r.round !== M.round) ui.notices.push('Imported a round-' + r.round + ' file into a round-' + M.round + ' page.');
+  if (r.ledger && r.ledger.sha256 !== M.ledger_sha256) ui.notices.push('Imported file was made against a different render of the ledger.');
+}
+
+// ---- rendering --------------------------------------------------------------------------------
+const stLabel = (e, f) => f.kind === 'landed' ? (e.status.on_base ? 'set aside · on base' : 'landed · ' + e.status.branch)
+  : f.kind === 'picked' ? 'picked · ' + f.mode : f.kind;
+function chipFor(id) {
+  const k = eff(byId[id]).kind;
+  return '<button class="chip ' + (k === 'open' ? '' : k) + '" data-act="jump" data-id="' + id + '" title="' + esc(byId[id].title + ' (' + k + ')') + '">' + id + '</button>';
+}
+function rowHTML(e, W) {
+  const f = eff(e), led = ledgerEff(e), st = S.entries[e.id] || {};
+  const open = ui.open.has(e.id), ws = W.filter(w => w.from === e.id), needed = W.filter(w => w.dep === e.id);
+  const unresolved = ws.filter(w => !w.cut).length;
+  const cm = st.comments || [], nq = cm.filter(c => c.kind === 'question').length, nn = cm.length - nq;
+  const answered = e.notes.filter(n => n.answer).length;
+  const changed = f.kind !== led.kind || f.mode !== led.mode || (f.kind === 'picked' && (f.batch || null) !== (led.batch || null));
+  const cls = ['main', e.kind, f.kind, open ? 'open' : '', (unresolved || needed.length) ? 'haswarn' : ''].join(' ');
+  let tags = '';
+  if (unresolved) tags += '<span class="tag warn">needs ' + ws.filter(w => !w.cut).map(w => w.dep + ' (' + w.state + ')').join(', ') + '</span>';
+  if (needed.length) tags += '<span class="tag warn">' + (needed.every(w => w.cut) ? 'cut by ' : 'needed by picked ') + needed.map(w => w.from).join(', ') + '</span>';
+  if (nq) tags += '<span class="tag q">' + nq + ' question' + (nq > 1 ? 's' : '') + '</span>';
+  if (nn) tags += '<span class="tag q">' + nn + ' note' + (nn > 1 ? 's' : '') + '</span>';
+  if (answered) tags += '<span class="tag aligned">' + answered + ' answered</span>';
+  if ((PENDING[e.id] || []).some(p => !p.answer)) tags += '<span class="tag">awaiting answer</span>';
+  const neededBy = (dependents[e.id] || []);
+  let mark = '—';
+  if (led.kind !== 'landed') {
+    mark = '<div class="seg">' + MODES.map(m => '<button data-act="mode" data-id="' + e.id + '" data-m="' + m + '" aria-pressed="' + (f.kind === 'picked' && f.mode === m) + '">' + m + '</button>').join('')
+      + '<button class="left" data-act="mode" data-id="' + e.id + '" data-m="left" aria-pressed="' + (f.kind === 'left') + '">left</button>'
+      + (changed ? '<button data-act="reset" data-id="' + e.id + '" title="Back to the ledger\'s status: ' + esc(e.status_raw) + '">↺</button>' : '') + '</div>';
+  }
+  const batch = f.kind === 'picked'
+    ? '<div class="batch">batch <input type="text" list="batchlist" data-k="batch:' + e.id + '" value="' + esc(f.batch || '') + '" placeholder="' + esc(defaultBatch(e.title)) + '"></div>' : '';
+  const statusChip = '<span class="tag ' + (f.kind === 'landed' ? 'aligned' : '') + '">' + esc(stLabel(e, f)) + '</span>' + (changed ? ' <span class="tag" title="ledger: ' + esc(e.status_raw) + '">changed</span>' : '');
+  let h = '<tr class="' + cls + '" data-act="toggle" data-id="' + e.id + '" id="row-' + e.id + '">'
+    + '<td class="id">' + (open ? '▾ ' : '▸ ') + esc(e.id) + '</td>'
+    + '<td><div class="title">' + esc(e.title) + '</div><div class="desc">' + esc(e.description) + '</div>' + (tags ? '<div class="meta">' + tags + '</div>' : '') + '</td>'
+    + '<td><span class="tag ' + e.fit + '" title="' + esc(e.fit_raw) + '">' + e.fit + '</span></td>'
+    + '<td>' + (e.depends.length ? e.depends.map(chipFor).join('') : '<span class="empty">none</span>')
+    + (neededBy.length ? '<div class="needed">needed by ' + neededBy.join(', ') + '</div>' : '') + '</td>'
+    + '<td>' + statusChip + batch + '</td><td>' + mark + '</td></tr>';
+  if (open) h += detailHTML(e, W);
+  return h;
+}
+function detailHTML(e, W) {
+  const st = S.entries[e.id] || {}, ws = W.filter(w => w.from === e.id), needed = W.filter(w => w.dep === e.id);
+  const f = (k, v) => v ? '<dt>' + k + '</dt><dd>' + esc(v) + '</dd>' : '';
+  let left = '<h4>Ledger entry</h4><dl class="f">' + f('Why', e.why) + f('Size', e.size) + f('Commits', e.commits) + f('Files', e.files)
+    + f('Depends on', e.depends_raw)
+    + ((dependents[e.id] || []).length ? '<dt>Needed by</dt><dd>' + dependents[e.id].map(chipFor).join('') + '</dd>' : '')
+    + f('Fit', e.fit_raw) + f('Status', e.status_raw) + '</dl>';
+  const notes = e.notes, pend = (PENDING[e.id] || []);
+  if (notes.length || pend.length || e.notes_inline) {
+    left += '<h4 style="margin-top:14px">Earlier notes and answers</h4>';
+    notes.forEach(n => {
+      if (n.kind === 'question') left += '<div class="thread"><div><span class="tag q">Q</span> ' + esc(n.text) + '<time>' + esc(n.date) + (n.qid ? ' · ' + n.qid : '') + '</time></div>'
+        + (n.answer ? '<div class="a"><b>A</b> ' + esc(n.answer) + '</div>' : '<div class="a wait">no answer recorded</div>') + '</div>';
+      else left += '<div class="thread"><span class="tag">' + (n.kind === 'note' ? 'Note' : 'Ledger') + '</span> ' + esc(n.text) + (n.date ? '<time>' + esc(n.date) + '</time>' : '') + '</div>';
+    });
+    if (e.notes_inline) left += '<div class="thread">' + esc(e.notes_inline) + '</div>';
+    pend.forEach(p => left += '<div class="thread"><div><span class="tag q">Q</span> ' + esc(p.text) + '<time>round ' + p.round + ' · ' + esc(p.id) + '</time></div>'
+      + (p.answer ? '<div class="a"><b>A</b> ' + esc(p.answer) + '</div>' : '<div class="a wait">awaiting answer (not yet in the ledger)</div>') + '</div>');
+  }
+  left += '<details class="raw"><summary>Ledger text, verbatim</summary><pre>' + esc(e.raw) + '</pre></details>';
+
+  let right = '<h4>Your round-' + M.round + ' response</h4>';
+  ws.forEach(w => {
+    right += '<div class="warnbox' + (w.cut ? ' cut' : '') + '"><b>' + (w.cut ? 'Dependency cut: ' : 'Dependency not picked: ') + '</b>' + e.id + ' depends on ' + w.dep + ' (' + esc(byId[w.dep].title) + '), which is ' + w.state + '.'
+      + '<div class="cutrow">Or say how to cut it: <input type="text" data-k="cut:' + e.id + ':' + w.dep + '" value="' + esc(w.cut) + '" placeholder="e.g. stub the attempt counter, land without F4 hooks"></div></div>';
+  });
+  needed.forEach(w => right += '<div class="warnbox' + (w.cut ? ' cut' : '') + '">Picked <b>' + w.from + '</b> depends on this entry, which is ' + w.state + (w.cut ? ' (cut: ' + esc(w.cut) + ')' : '') + '.</div>');
+  (st.comments || []).forEach(c => right += '<div class="cm"><span class="tag q">' + (c.kind === 'question' ? 'Q' : 'Note') + '</span><div>' + esc(c.text) + '</div><button class="x" data-act="delc" data-id="' + e.id + '" data-cid="' + c.id + '" title="Delete">✕</button></div>');
+  const kind = ui.kinds[e.id] || 'question';
+  right += '<div class="composer"><textarea data-k="c:' + e.id + '" placeholder="Ask a question or leave a note. Ctrl+Enter to add.">' + esc(ui.drafts[e.id] || '') + '</textarea>'
+    + '<div class="crow"><label><input type="radio" name="k-' + e.id + '" data-act="kind" data-id="' + e.id + '" value="question"' + (kind === 'question' ? ' checked' : '') + '> question</label>'
+    + '<label><input type="radio" name="k-' + e.id + '" data-act="kind" data-id="' + e.id + '" value="note"' + (kind === 'note' ? ' checked' : '') + '> note</label>'
+    + '<span class="sp"></span><button class="btn" data-act="addc" data-id="' + e.id + '">Add</button></div></div>';
+  return '<tr class="detail"><td colspan="6"><div class="dgrid"><div>' + left + '</div><div>' + right + '</div></div></td></tr>';
+}
+function matches(e, W) {
+  const f = eff(e), st = S.entries[e.id] || {};
+  switch (ui.filter) {
+    case 'open': return f.kind === 'open';
+    case 'picked': return f.kind === 'picked';
+    case 'left': return f.kind === 'left';
+    case 'questions': return (st.comments || []).length > 0;
+    case 'warnings': return W.some(w => w.from === e.id || w.dep === e.id);
+    default: return true;
+  }
+}
+function batchesHTML() {
+  const groups = {};
+  E.forEach(e => { if (eff(e).kind === 'picked') (groups[batchName(e)] = groups[batchName(e)] || []).push(e); });
+  const names = Object.keys(groups);
+  $('#batchlist').innerHTML = [...new Set(names)].map(n => '<option value="' + esc(n) + '">').join('');
+  if (!names.length) return '<span class="empty">Nothing picked yet. Each pick defaults to its own branch, harvest/&lt;first four words of the title&gt;.</span>';
+  return names.map(n => {
+    const es = groups[n], info = [];
+    es.forEach(e => e.depends.forEach(d => {
+      const t = byId[d], ft = eff(t);
+      if (ft.kind === 'picked' && batchName(t) !== n) info.push(e.id + ' builds on ' + d + ' (batch ' + batchName(t) + '): land that one first');
+    }));
+    return '<div class="bt"><b>harvest/' + esc(n) + '</b> <span class="sub">' + es.length + ' feature' + (es.length > 1 ? 's' : '') + '</span>'
+      + es.map(e => '<div>' + e.id + ' <span class="sub">' + eff(e).mode + '</span> ' + esc(e.title) + '</div>').join('')
+      + info.map(i => '<div class="info">' + esc(i) + '</div>').join('') + '</div>';
+  }).join('');
+}
+function chrome() {
+  const W = warnings(), un = W.filter(w => !w.cut);
+  const feats = E.filter(e => e.kind !== 'setaside' && ledgerEff(e).kind !== 'landed');
+  const c = {picked: 0, left: 0, open: 0};
+  feats.forEach(e => c[eff(e).kind]++);
+  const landed = E.filter(e => ledgerEff(e).kind === 'landed' && e.kind !== 'setaside').length, aside = E.filter(e => e.kind === 'setaside').length;
+  const nq = Object.values(S.entries).reduce((n, s) => n + (s.comments || []).filter(x => x.kind === 'question').length, 0);
+  $('#counts').innerHTML = '<span class="pill">' + c.open + ' open</span><span class="pill">' + c.picked + ' picked</span><span class="pill">' + c.left + ' left</span><span class="pill">' + landed + ' landed</span><span class="pill">' + aside + ' set aside</span>'
+    + '<span class="pill">' + nq + ' question' + (nq === 1 ? '' : 's') + '</span>' + (un.length ? '<span class="pill warn">' + un.length + ' dependency warning' + (un.length > 1 ? 's' : '') + '</span>' : '');
+  $('#filters').innerHTML = [['all', 'All'], ['open', 'Open'], ['picked', 'Picked'], ['left', 'Left'], ['questions', 'With comments'], ['warnings', 'Warnings']]
+    .map(([k, l]) => '<button class="pill ' + (ui.filter === k ? 'on' : '') + '" data-act="filter" data-f="' + k + '">' + l + '</button>').join('');
+  const fs = ui.fsa;
+  $('#b-fsa').disabled = !window.showSaveFilePicker;
+  $('#b-fsa').title = window.showSaveFilePicker ? 'Write straight to a file you choose; rewritten on every change' : 'Not available in this browser (Chromium only)';
+  let s = ui.lsOk ? 'Draft saved in this browser' + (ui.savedAt ? ' · ' + new Date(ui.savedAt).toLocaleTimeString() : '') : 'Browser storage unavailable: export before closing';
+  if (fs.state === 'on') s += ' · writing to ' + (fs.handle && fs.handle.name) + (fs.last ? ' (' + fs.last.toLocaleTimeString() + ')' : '');
+  if (fs.state === 'ask') s += ' · <button class="btn" data-act="fsa-reconnect">Reconnect ' + esc(fs.handle.name) + '</button>';
+  if (fs.state === 'lost' || fs.err) s += ' · file write failed: ' + esc(fs.err);
+  $('#savestate').innerHTML = s;
+  const bn = [];
+  if (M.parse_warnings.length) bn.push('<div class="banner"><b>The ledger did not parse cleanly (' + M.parse_warnings.length + ').</b> Check these in the ledger file:<ul>' + M.parse_warnings.map(w => '<li>' + esc(w) + '</li>').join('') + '</ul></div>');
+  ui.notices.forEach(n => bn.push('<div class="banner">' + esc(n) + '</div>'));
+  $('#banners').innerHTML = bn.join('');
+  $('#batches').innerHTML = batchesHTML();
+}
+function render() {
+  const a = document.activeElement, key = a && a.dataset && a.dataset.k, pos = a && a.selectionStart;
+  const W = warnings(), groups = [['feature', 'Features, in dependency order'], ['plumbing', 'Plumbing'], ['headonly', 'Head-only'], ['setaside', 'Set aside: already on base']];
+  let h = '';
+  groups.forEach(([k, label]) => {
+    const rows = E.filter(e => e.kind === k && (matches(e, W) || ui.open.has(e.id)));
+    if (!rows.length) return;
+    h += '<tr class="grp"><td colspan="6">' + label + ' · ' + rows.length + '</td></tr>' + rows.map(e => rowHTML(e, W)).join('');
+  });
+  $('#tb').innerHTML = h || '<tr><td colspan="6" class="empty">Nothing matches this filter.</td></tr>';
+  chrome();
+  $('#general').value = S.general || '';
+  if (key) { const n = document.querySelector('[data-k="' + key + '"]'); if (n) { n.focus(); try { n.setSelectionRange(pos, pos); } catch (e) {} } }
+}
+function addComment(id) {
+  const t = (ui.drafts[id] || '').trim(); if (!t) return;
+  const st = get(id); st.comments = st.comments || [];
+  st.comments.push({id: 'r' + M.round + '.q' + S.nextQ++, kind: ui.kinds[id] || 'question', text: t, created: new Date().toISOString()});
+  ui.drafts[id] = ''; persist(); render();
+}
+
+// ---- events -----------------------------------------------------------------------------------
+document.addEventListener('click', ev => {
+  const t = ev.target.closest('[data-act]'); if (!t) return;
+  const act = t.dataset.act, id = t.dataset.id;
+  if (act === 'kind') return;
+  if (t.tagName === 'TR' && ev.target.closest('button,input,a,.chip')) return;   // controls inside a row do their own thing
+  ev.stopPropagation();
+  switch (act) {
+    case 'toggle': ui.open.has(id) ? ui.open.delete(id) : ui.open.add(id); render(); break;
+    case 'jump': ui.filter = 'all'; ui.open.add(id); render(); document.getElementById('row-' + id).scrollIntoView({block: 'center'}); break;
+    case 'mode': setMode(id, t.dataset.m); persist(); render(); break;
+    case 'reset': delete get(id).mode; delete get(id).batch; prune(id); persist(); render(); break;
+    case 'filter': ui.filter = t.dataset.f; render(); break;
+    case 'addc': addComment(id); break;
+    case 'delc': { const st = get(id); st.comments = st.comments.filter(c => c.id !== t.dataset.cid); prune(id); persist(); render(); break; }
+    case 'export': {
+      const b = new Blob([respText()], {type: 'application/json'}), a = document.createElement('a');
+      a.href = URL.createObjectURL(b); a.download = 'responses.json'; document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 1000); break;
+    }
+    case 'copy': copyResponses(); break;
+    case 'fsa': fsaPick(); break;
+    case 'fsa-reconnect': fsaReconnect(); break;
+    case 'import': $('#importfile').click(); break;
+    case 'resetdraft': if (confirm('Discard every mark, question and note on this page?')) { S = {entries: {}, general: '', nextQ: 1}; ui.drafts = {}; persist(); render(); } break;
+  }
+});
+document.addEventListener('change', ev => { const t = ev.target; if (t.dataset.act === 'kind') ui.kinds[t.dataset.id] = t.value; });
+document.addEventListener('input', ev => {
+  const k = ev.target.dataset && ev.target.dataset.k; if (!k) return;
+  const v = ev.target.value, p = k.split(':');
+  if (p[0] === 'general') S.general = v;
+  else if (p[0] === 'c') { ui.drafts[p[1]] = v; return; }
+  else if (p[0] === 'batch') { get(p[1]).batch = v; prune(p[1]); }
+  else if (p[0] === 'cut') { const st = get(p[1]); st.cuts = st.cuts || {}; st.cuts[p[2]] = v; }
+  persist(); render();
+});
+document.addEventListener('keydown', ev => {
+  if (ev.key === 'Enter' && (ev.ctrlKey || ev.metaKey) && ev.target.dataset && ev.target.dataset.k && ev.target.dataset.k.startsWith('c:')) addComment(ev.target.dataset.k.slice(2));
+});
+$('#importfile').addEventListener('change', async ev => {
+  const f = ev.target.files[0]; if (!f) return;
+  try { importState(JSON.parse(await f.text())); persist(); render(); } catch (err) { ui.notices.push('Import failed: ' + err.message); render(); }
+  ev.target.value = '';
+});
+async function copyResponses() {
+  const text = 'Harvest responses, round ' + M.round + ' (' + M.ledger_name + '):\n```json\n' + respText() + '\n```';
+  try { await navigator.clipboard.writeText(text); ui.copied = true; $('#savestate').textContent = 'Copied ' + text.length + ' characters. Paste into chat.'; return; } catch (e) {}
+  $('#modal').innerHTML = '<div class="modal"><div class="box"><p>Clipboard blocked. Select all and copy:</p><textarea id="mt" readonly></textarea><p><button class="btn" id="mclose">Close</button></p></div></div>';
+  $('#mt').value = text; $('#mt').select(); $('#mclose').onclick = () => $('#modal').innerHTML = '';
+}
+
+// ---- boot -------------------------------------------------------------------------------------
+document.title = 'Harvest report: ' + (M.head || '') + ' → ' + (M.base || '');
+$('#h-title').textContent = 'Harvest report: ' + M.head + ' → ' + M.base;
+$('#h-sub').textContent = 'Round ' + M.round + ' · ledger ' + M.ledger_name + ' · head ' + M.head_sha + ' · updated ' + M.updated + ' · ledger sha ' + M.ledger_sha256.slice(0, 10);
+load(); render(); fsaRestore();
+window.__harvest = {buildResponses, get state() { return S; }};
+</script>
+</body>
+</html>
