@@ -103,7 +103,7 @@ Every landing has to pass the same checks:
 
 ## Batched review page
 
-On a big ledger, deciding features one chat message at a time is slow. When the agent shows you the ledger, it offers a review page instead: a single offline HTML file it can open in your browser. Go through the entries in dependency order, mark each one cherry-pick, rework, rebuild or leave, name batches, and queue your questions. The page flags any pick whose dependency you left, and shows the branches it would land. When you're done, **Finish round** copies the whole round, and you paste it into the chat with your agent.
+On a big ledger, deciding features one chat message at a time is slow. When the agent shows you the ledger, it asks whether you'd rather review on a page: a single offline HTML file it can open in your browser. Go through the entries in dependency order, mark each one cherry-pick, rework, rebuild or leave, name batches, and queue your questions. The page flags any pick whose dependency you left, and shows the branches it would land. When you're done, **Finish round** copies the whole round, and you paste it into the chat with your agent.
 
 The agent checks the round against the ledger, applies your marks, answers every question in one pass, and gives you the next round's page with the answers inline. The ledger stays the record: the page is generated from it and never edits it. Nothing about the page is required. Turn it down and the session stays in chat as before.
 

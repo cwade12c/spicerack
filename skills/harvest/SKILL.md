@@ -71,7 +71,18 @@ Done when the coverage check exits 0 and every entry has its title, description,
 
 Present the ledger to the human as a table: title, one-line description, fit, and dependencies, ordered by dependency so features come before the ones that build on them, with `Plumbing` and `Head-only` last. The full entries stay in the ledger file.
 
-With the table, offer in one line to make a review page: the human can question and pick here in chat, or mark every entry in one pass in their browser. If they want the page, read [references/REPORT.md](references/REPORT.md); otherwise carry on in chat.
+After the table, ask how the human wants to review, and wait for the answer. Use your multiple-choice question tool if you have one, with the same question and two options, the review page first and marked recommended. Otherwise end your message with this, where `<N>` is the number of feature entries:
+
+```markdown
+### How do you want to review these <N> features?
+
+1. **Review page**: mark all <N> in your browser, ask questions as you go, and send the round back in one paste.
+2. **Chat**: question and pick entries here, one at a time.
+
+Reply 1 or 2.
+```
+
+For the review page, read [references/REPORT.md](references/REPORT.md). For chat, carry on with step 3.
 
 ## 3. Interrogate
 

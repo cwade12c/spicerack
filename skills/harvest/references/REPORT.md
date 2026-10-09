@@ -6,9 +6,7 @@ The ledger stays the single source of truth. The page is generated from it by a 
 
 ## When to offer it
 
-Offer it once, in one line, when you present the ledger table at the end of step 2: the human can question and pick in chat, or you can make a review page so they mark every entry in one pass in their browser. For example: "You can question and pick these here, or I can make a review page so you can mark them all in one pass in your browser. Want the page?"
-
-Render it whenever the human asks for it later, too. If they choose chat, or let the offer pass, carry on in chat and don't offer it again. A session that never uses the page runs exactly as SKILL.md describes.
+Step 2 of SKILL.md ends by asking the human whether to review on the page or in chat; you are here because they chose the page. Render it whenever they ask for it later, too. If they chose chat, don't offer it again. A session that never uses the page runs exactly as SKILL.md describes.
 
 ## 1. Render
 
