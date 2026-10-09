@@ -673,8 +673,8 @@ function warnings() {
     e.depends.forEach(d => {
       const k = eff(byId[d]).kind;
       if (k === 'picked' || k === 'landed') return;
-      const how = ((S.entries[e.id] || {}).cuts || {})[d] || '';
-      w.push({from: e.id, dep: d, state: k, cut: how.trim()});
+      const how = ((S.entries[e.id] || {}).cuts || {})[d] || '', led = (e.cuts || {})[d] || '';
+      w.push({from: e.id, dep: d, state: k, cut: (how || led).trim(), ledgerCut: !how.trim() && !!led});
     });
   });
   return w;
@@ -985,7 +985,8 @@ function resolveHTML(e, W) {
     if (w.cut && !open) {
       h += '<div class="resolve cut"><h4>' + ic('scissors') + 'Cut: ' + esc(e.id) + ' lands without ' + esc(w.dep) + '</h4>'
         + '<p class="cuttext">“' + esc(w.cut) + '”</p>'
-        + '<div class="acts"><button class="btn sm" data-act="cutedit" data-id="' + e.id + '" data-dep="' + w.dep + '">Edit</button><button class="btn sm ghost" data-act="cutclear" data-id="' + e.id + '" data-dep="' + w.dep + '">Remove cut</button></div></div>';
+        // A cut already in the ledger changes by asking Claude, not here: the responses file only carries new cuts.
+        + (w.ledgerCut ? '<p class="muted">From the ledger. To change it, ask a question on this entry.</p>' : '<div class="acts"><button class="btn sm" data-act="cutedit" data-id="' + e.id + '" data-dep="' + w.dep + '">Edit</button><button class="btn sm ghost" data-act="cutclear" data-id="' + e.id + '" data-dep="' + w.dep + '">Remove cut</button></div>') + '</div>';
       return;
     }
     h += '<div class="resolve"><h4>' + ic('warn') + esc(e.id) + ' needs ' + esc(w.dep) + ', which is ' + (w.state === 'open' ? 'undecided' : w.state) + '</h4>'

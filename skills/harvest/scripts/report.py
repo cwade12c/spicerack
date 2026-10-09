@@ -51,14 +51,14 @@ def parse_header(lines, warns):
             h[m.group(1).strip().lower()] = m.group(2).strip()
     out = {"raw": h}
     for key in ("base", "head"):
-        v = h.get(key, "")
+        v = h.get(key, "").replace("`", "")
         m = re.match(r"^(.*?)\s*(?:@|\()\s*([0-9a-f]{7,40})\)?\s*$", v)
         if m:
             out[key], out[key + "_sha"] = m.group(1).strip(), m.group(2)
         else:
             out[key], out[key + "_sha"] = v, ""
             warns.append("header: could not read a SHA from '%s: %s'" % (key.title(), v))
-    out["merge_base"] = h.get("merge-base", "")
+    out["merge_base"] = h.get("merge-base", "").replace("`", "")
     out["updated"] = h.get("updated", "")
     m = re.search(r"round\s+(\d+)", h.get("report", ""))
     out["ingested_round"] = int(m.group(1)) if m else 0
@@ -113,6 +113,33 @@ def parse_notes(sub, eid):
     return out
 
 
+def parse_depends(raw, eid, warns):
+    """`Depends on:` -> (ids, cuts). Ids come from the text before the first `;`, outside
+    parentheses, so prose and reasons can mention other entries. A range `F2-F4` is expanded,
+    with a warning. After the `;`, each `cut F4: <how>` records a dependency the human cut."""
+    ids_part, _, rest = raw.partition(";")
+    ids_part = re.sub(r"\([^()]*\)", "", ids_part)
+
+    def expand(m):
+        a, b = int(m.group(1)), int(m.group(2))
+        warns.append("%s: Depends on names the range F%d-F%d; name each id" % (eid, a, b))
+        return ", ".join("F%d" % i for i in range(a, b + 1))
+    ids_part = re.sub(r"\bF(\d+)\s*[-–]\s*F(\d+)\b", expand, ids_part)
+    deps = []
+    for d in re.findall(r"\b%s\b" % ID_RE, ids_part):
+        if d != eid and d not in deps:
+            deps.append(d)
+    cuts = {}
+    for m in re.finditer(r"(?:^|;)\s*cut\b\s*(%s)?\s*:\s*(.*?)\s*(?=;\s*cut\b|$)" % ID_RE, rest, re.S):
+        if not m.group(1):
+            warns.append("%s: a cut must name the dependency it cuts, as 'cut F4: <how>': %r" % (eid, m.group(2)[:40]))
+        elif m.group(1) not in deps:
+            warns.append("%s: cuts %s, which is not in its Depends on ids" % (eid, m.group(1)))
+        elif m.group(2):
+            cuts[m.group(1)] = m.group(2)
+    return deps, cuts
+
+
 def parse_entry(block, warns):
     head = HEADING_RE.match(block[0])
     eid, title = head.group(1), head.group(2)
@@ -149,10 +176,7 @@ def parse_entry(block, warns):
         warns.append("%s: missing 'Why:' line" % eid)
     status = parse_status(bullets.get("Status", "open"), eid, warns)
     dep_raw = bullets.get("Depends on", "none")
-    deps = []
-    for d in re.findall(r"\b%s\b" % ID_RE, dep_raw):
-        if d != eid and d not in deps:
-            deps.append(d)
+    deps, cuts = parse_depends(dep_raw, eid, warns)
     fit_raw = bullets.get("Fit", "")
     fm = re.match(r"^(aligned|tension|conflict)\b", fit_raw)
     if not fm:
@@ -169,7 +193,7 @@ def parse_entry(block, warns):
         "id": eid, "title": title, "kind": kind,
         "description": " ".join(desc), "why": why,
         "size": bullets.get("Size", ""), "commits": bullets.get("Commits", ""),
-        "files": bullets.get("Files", ""), "depends_raw": dep_raw, "depends": deps,
+        "files": bullets.get("Files", ""), "depends_raw": dep_raw, "depends": deps, "cuts": cuts,
         "fit_raw": fit_raw, "fit": fm.group(1) if fm else "?",
         "status_raw": bullets.get("Status", ""), "status": status,
         "notes": parse_notes(sub.get("Notes", []), eid),
@@ -185,13 +209,22 @@ def parse_ledger(text):
     header = parse_header(lines[: idx[0]] if idx else lines, warns)
     m = re.match(r"^#\s+(.*)$", lines[0]) if lines else None
     header["title"] = m.group(1) if m else ""
+    set_aside_lines = [ln for ln in lines[: idx[0]] if idx and "already on base" in ln and ln.lstrip().startswith(("-", "*"))]
+    if set_aside_lines:
+        warns.append("header: %d set-aside item(s) listed outside '### S<n>.' entries; the page does not show them"
+                     % len(set_aside_lines))
     entries = []
     for n, i in enumerate(idx):
         j = idx[n + 1] if n + 1 < len(idx) else len(lines)
+        # An entry also ends at a higher-level heading, so a trailing section is not read as its body.
+        j = next((k for k in range(i + 1, j) if re.match(r"^#{1,2}\s", lines[k])), j)
         if not HEADING_RE.match(lines[i]):
             warns.append("heading without a recognised id (F<n>/S<n>/Plumbing/Head-only): %r" % lines[i][:60])
             continue
-        entries.append(parse_entry(lines[i:j], warns))
+        e = parse_entry(lines[i:j], warns)
+        if not e["title"]:
+            warns.append("%s: heading has no title; write '### %s. <title>'" % (e["id"], e["id"]))
+        entries.append(e)
     ids = [e["id"] for e in entries]
     for d in {x for x in ids if ids.count(x) > 1}:
         warns.append("duplicate entry id %s" % d)
@@ -200,6 +233,7 @@ def parse_ledger(text):
             if d not in ids:
                 warns.append("%s: depends on %s, which is not in the ledger" % (e["id"], d))
         e["depends"] = [d for d in e["depends"] if d in ids]
+        e["cuts"] = {d: how for d, how in e["cuts"].items() if d in ids}
     return header, order_entries(entries), warns
 
 
@@ -389,7 +423,7 @@ def cmd_check(a):
     for e in entries:
         if eff(e["id"]) != "picked":
             continue
-        cuts = {c.get("dep") for c in (r.get("entries") or {}).get(e["id"], {}).get("cuts", [])}
+        cuts = set(e["cuts"]) | {c.get("dep") for c in (r.get("entries") or {}).get(e["id"], {}).get("cuts", [])}
         for d in e["depends"]:
             if eff(d) not in ("picked", "landed") and d not in cuts:
                 notes.append("DEPENDENCY %s is picked but needs %s (%s) and no cut was given" % (e["id"], d, eff(d)))
