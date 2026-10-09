@@ -4,7 +4,7 @@ description: Reduce a large diff between two diverged refs (a fork and its upstr
 argument-hint: "<base-ref> <head-ref> [fresh], e.g. upstream/main origin/main"
 disable-model-invocation: true
 license: MIT
-compatibility: Requires git and python3 (standard library only), with shell access. Built for Claude Code; runs in any agent that supports Agent Skills.
+compatibility: Requires git and python3 (standard library only), with shell access. Runs in any agent that supports Agent Skills.
 ---
 
 # Harvest

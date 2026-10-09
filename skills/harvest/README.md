@@ -134,7 +134,7 @@ The checker proves the ledger is complete and consistent. Whether commits are gr
 
 ## Requirements
 
-- A coding agent that supports [Agent Skills](https://agentskills.io) and can run shell commands.
+- A coding agent that supports [Agent Skills](https://agentskills.io) and can run shell commands. Harvest has been tested in Claude Code.
 - The skill installed, either way:
   - `npx skills add cwade12c/spicerack --skill harvest`, for any supported agent;
   - or, in Claude Code, `/plugin marketplace add cwade12c/spicerack` and `/plugin install harvest@spicerack`.
