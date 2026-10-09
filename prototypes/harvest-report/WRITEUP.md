@@ -3,6 +3,8 @@
 **Status: throwaway prototype, built to answer a design question. Not integrated into `skills/harvest/`.**
 Branch: `prototype/harvest-report`. Everything lives in `prototypes/harvest-report/`.
 
+> **Round 2** (a redesigned page on the same protocol) is in [`v2/`](v2/WRITEUP.md).
+
 Written for the person reviewing and iterating on the UI/UX. Section 7 is the list of things I
 already know are rough, so you don't have to rediscover them.
 

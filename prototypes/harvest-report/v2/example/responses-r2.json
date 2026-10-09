@@ -1,0 +1,29 @@
+{
+  "schema": "harvest-responses/1",
+  "round": 2,
+  "created": "2026-10-09T05:31:57.792Z",
+  "ledger": {
+    "name": "ledger-r1.md",
+    "sha256": "aabd17cca9c84237b3d9e5d149d3e81de59a0a16d37b2446c82fbfa54afbf1e0",
+    "head": "origin/main",
+    "head_sha": "8c1d2e0",
+    "base": "upstream/main",
+    "base_sha": "4be19e2",
+    "updated": "2026-10-09 05:10"
+  },
+  "entries": {
+    "F3": {
+      "title": "Persist job records in SQLite",
+      "status": "picked: rework, batch: storage",
+      "comments": [
+        {
+          "id": "r2.q1",
+          "kind": "question",
+          "text": "So F4 and F5 hard-depend on the file being on?",
+          "created": "2026-10-09T05:31:57.387Z"
+        }
+      ]
+    }
+  },
+  "general_notes": ""
+}

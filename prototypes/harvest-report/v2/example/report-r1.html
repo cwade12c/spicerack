@@ -1,0 +1,1567 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>Harvest review</title>
+<!--
+  PROTOTYPE v2: fixed template for the harvest review page. render_report.py replaces {"meta": {"title": "Harvest ledger: origin/main → upstream/main", "base": "upstream/main", "base_sha": "4be19e2", "head": "origin/main", "head_sha": "8c1d2e0", "merge_base": "3f2a91c", "updated": "2026-10-02 16:40", "header": {"base": "upstream/main @ 4be19e2", "head": "origin/main @ 8c1d2e0", "merge-base": "3f2a91c", "updated": "2026-10-02 16:40", "content-free merges": "71d0c5a (merge of origin/dev, no content), e92b4f1 (merge of upstream/main into origin/main)", "not in range": "5aa3c10 (upstream merge \"rate limiter rebuild\", brought fork-authored work in below the merge-base)", "read in full": "src/pantry/**, daemon/**", "attributed only": "tests/**, docs/**, deploy/**, uv.lock"}, "ledger_name": "origin-main.md", "ledger_sha256": "96e8f5957bb6e0b8bfb6e3edce748a343923a293b117c772388d6ff17a38f777", "round": 1, "ingested_round": 0, "generated": "2026-10-09T05:31:44Z", "parse_warnings": []}, "pending": {}, "entries": [{"id": "F1", "title": "Structured JSON logging with request ids", "kind": "feature", "description": "Every log line is emitted as one JSON object carrying the job id and a per-request id, instead of free-form text.", "why": "\"grep-able logs for the on-call rotation\" (commit 7ab1c22).", "size": "+180 / -41 across 5 files", "commits": "7ab1c22, 0de4f19", "files": "5 (1 shared). Source: src/pantry/log.py (new), src/pantry/worker.py (shared with F4)", "depends_raw": "none", "depends": [], "fit_raw": "aligned. CONTRIBUTING.md:31 asks for \"machine-readable logs where practical\".", "fit": "aligned", "status_raw": "landed: harvest/structured-json-logging", "status": {"kind": "landed", "branch": "harvest/structured-json-logging", "on_base": false}, "notes": [], "notes_inline": "", "raw": "### F1. Structured JSON logging with request ids\n\nEvery log line is emitted as one JSON object carrying the job id and a per-request id, instead of free-form text.\nWhy: \"grep-able logs for the on-call rotation\" (commit 7ab1c22).\n\n- Size: +180 / -41 across 5 files\n- Commits: 7ab1c22, 0de4f19\n- Files: 5 (1 shared). Source: src/pantry/log.py (new), src/pantry/worker.py (shared with F4)\n- Depends on: none\n- Fit: aligned. CONTRIBUTING.md:31 asks for \"machine-readable logs where practical\".\n- Status: landed: harvest/structured-json-logging", "order": 0}, {"id": "F2", "title": "Layered TOML config loader", "kind": "feature", "description": "Config is read from /etc, then the user directory, then the working directory, each layer overriding the last.", "why": "\"ops wanted per-host overrides without editing the shipped file\" (commit 3c9d8e0).", "size": "+210 / -66 across 4 files", "commits": "3c9d8e0, b4417ad", "files": "4 (2 shared). Source: src/pantry/config.py (shared with F14, F16), src/pantry/cli.py", "depends_raw": "none", "depends": [], "fit_raw": "aligned. README.md:58 lists \"files in /etc\" as supported config; layering is a small extension.", "fit": "aligned", "status_raw": "open", "status": {"kind": "open"}, "notes": [], "notes_inline": "", "raw": "### F2. Layered TOML config loader\n\nConfig is read from /etc, then the user directory, then the working directory, each layer overriding the last.\nWhy: \"ops wanted per-host overrides without editing the shipped file\" (commit 3c9d8e0).\n\n- Size: +210 / -66 across 4 files\n- Commits: 3c9d8e0, b4417ad\n- Files: 4 (2 shared). Source: src/pantry/config.py (shared with F14, F16), src/pantry/cli.py\n- Depends on: none\n- Fit: aligned. README.md:58 lists \"files in /etc\" as supported config; layering is a small extension.\n- Status: open", "order": 1}, {"id": "F3", "title": "Persist job records in SQLite", "kind": "feature", "description": "Job state survives a daemon restart because it is stored in a SQLite file instead of an in-memory dict.", "why": "\"jobs were lost on every deploy\" (commit 91fe0b3).", "size": "+520 / -88 across 9 files", "commits": "91fe0b3, a77c4de, 2d0e8b9", "files": "9 (3 shared). Source: src/pantry/store.py (new), src/pantry/queue.py (shared with F6, F13), src/pantry/models.py", "depends_raw": "F2 (reads the database path from the layered config)", "depends": ["F2"], "fit_raw": "tension. ADR-002 says \"job state is in memory; durability is the caller's problem\".", "fit": "tension", "status_raw": "open", "status": {"kind": "open"}, "notes": [], "notes_inline": "", "raw": "### F3. Persist job records in SQLite\n\nJob state survives a daemon restart because it is stored in a SQLite file instead of an in-memory dict.\nWhy: \"jobs were lost on every deploy\" (commit 91fe0b3).\n\n- Size: +520 / -88 across 9 files\n- Commits: 91fe0b3, a77c4de, 2d0e8b9\n- Files: 9 (3 shared). Source: src/pantry/store.py (new), src/pantry/queue.py (shared with F6, F13), src/pantry/models.py\n- Depends on: F2 (reads the database path from the layered config)\n- Fit: tension. ADR-002 says \"job state is in memory; durability is the caller's problem\".\n- Status: open", "order": 2}, {"id": "F4", "title": "Retry failed jobs with exponential backoff", "kind": "feature", "description": "Jobs that fail are retried up to five times with growing delays, instead of being dropped.", "why": "\"flaky downstreams drop work silently\" (commit c3a90e5).", "size": "+240 / -12 across 6 files", "commits": "c3a90e5, e4f5a6b (partial: src/pantry/queue.py)", "files": "6 (2 shared). Source: src/pantry/retry.py (new), src/pantry/queue.py (shared with F3)", "depends_raw": "F3 (attempt counts live in the job table), F1 (adds `_retry_delay` to F1's log context)", "depends": ["F3", "F1"], "fit_raw": "tension. Adds a background timer thread; ADR-004 says the worker is single-threaded.", "fit": "tension", "status_raw": "open", "status": {"kind": "open"}, "notes": [{"date": "2026-10-02", "kind": "question", "round": null, "qid": null, "text": "Does the retry timer really need its own thread?", "answer": "It only runs the backoff sleep (retry.py:40-88). Base's worker already has a scheduled-job queue (worker/jobs.py:12), so a retry could re-enqueue itself with a delay and ADR-004 stays intact."}], "notes_inline": "", "raw": "### F4. Retry failed jobs with exponential backoff\n\nJobs that fail are retried up to five times with growing delays, instead of being dropped.\nWhy: \"flaky downstreams drop work silently\" (commit c3a90e5).\n\n- Size: +240 / -12 across 6 files\n- Commits: c3a90e5, e4f5a6b (partial: src/pantry/queue.py)\n- Files: 6 (2 shared). Source: src/pantry/retry.py (new), src/pantry/queue.py (shared with F3)\n- Depends on: F3 (attempt counts live in the job table), F1 (adds `_retry_delay` to F1's log context)\n- Fit: tension. Adds a background timer thread; ADR-004 says the worker is single-threaded.\n- Status: open\n- Notes:\n  - 2026-10-02 Q: Does the retry timer really need its own thread? A: It only runs the backoff sleep (retry.py:40-88). Base's worker already has a scheduled-job queue (worker/jobs.py:12), so a retry could re-enqueue itself with a delay and ADR-004 stays intact.", "order": 3}, {"id": "F5", "title": "Dead-letter queue for exhausted retries", "kind": "feature", "description": "Jobs that use up their retries are parked in a dead-letter table where an operator can inspect and replay them.", "why": "\"we kept losing the jobs that mattered most\" (commit 5f1be27).", "size": "+160 / -4 across 3 files", "commits": "5f1be27", "files": "3 (1 shared). Source: src/pantry/deadletter.py (new), src/pantry/retry.py (shared with F4)", "depends_raw": "F4 (hooks the retry-exhausted event), F3 (dead letters are rows in the job table)", "depends": ["F4", "F3"], "fit_raw": "aligned. docs/design.md:44 already names a \"dead letter\" as a future concept.", "fit": "aligned", "status_raw": "open", "status": {"kind": "open"}, "notes": [], "notes_inline": "", "raw": "### F5. Dead-letter queue for exhausted retries\n\nJobs that use up their retries are parked in a dead-letter table where an operator can inspect and replay them.\nWhy: \"we kept losing the jobs that mattered most\" (commit 5f1be27).\n\n- Size: +160 / -4 across 3 files\n- Commits: 5f1be27\n- Files: 3 (1 shared). Source: src/pantry/deadletter.py (new), src/pantry/retry.py (shared with F4)\n- Depends on: F4 (hooks the retry-exhausted event), F3 (dead letters are rows in the job table)\n- Fit: aligned. docs/design.md:44 already names a \"dead letter\" as a future concept.\n- Status: open", "order": 4}, {"id": "F6", "title": "Priority lanes (high, normal, low)", "kind": "feature", "description": "Jobs carry a priority and workers drain high before normal before low, instead of strict arrival order.", "why": "\"billing jobs queued behind a 40,000-row export\" (commit 08ac6d1).", "size": "+130 / -30 across 4 files", "commits": "08ac6d1, 1b7e33f", "files": "4 (1 shared). Source: src/pantry/queue.py (shared with F3), src/pantry/priority.py (new)", "depends_raw": "F3 (priority is a column on the job row)", "depends": ["F3"], "fit_raw": "aligned. README.md:72 lists \"ordering\" as an extension point.", "fit": "aligned", "status_raw": "open", "status": {"kind": "open"}, "notes": [], "notes_inline": "", "raw": "### F6. Priority lanes (high, normal, low)\n\nJobs carry a priority and workers drain high before normal before low, instead of strict arrival order.\nWhy: \"billing jobs queued behind a 40,000-row export\" (commit 08ac6d1).\n\n- Size: +130 / -30 across 4 files\n- Commits: 08ac6d1, 1b7e33f\n- Files: 4 (1 shared). Source: src/pantry/queue.py (shared with F3), src/pantry/priority.py (new)\n- Depends on: F3 (priority is a column on the job row)\n- Fit: aligned. README.md:72 lists \"ordering\" as an extension point.\n- Status: open", "order": 5}, {"id": "F7", "title": "Per-queue concurrency limits", "kind": "feature", "description": "Each named queue can cap how many of its jobs run at once, instead of one global worker count.", "why": "\"one noisy queue starves the rest\" (commit d19e840).", "size": "+95 / -22 across 3 files", "commits": "d19e840", "files": "3 (2 shared). Source: src/pantry/worker.py (shared with F1, F8), src/pantry/config.py (shared with F2)", "depends_raw": "F2 (limits are configured per queue), F6 (limits apply per lane)", "depends": ["F2", "F6"], "fit_raw": "tension. ADR-004's single-threaded worker has no notion of concurrent jobs; this assumes a thread pool.", "fit": "tension", "status_raw": "open", "status": {"kind": "open"}, "notes": [], "notes_inline": "", "raw": "### F7. Per-queue concurrency limits\n\nEach named queue can cap how many of its jobs run at once, instead of one global worker count.\nWhy: \"one noisy queue starves the rest\" (commit d19e840).\n\n- Size: +95 / -22 across 3 files\n- Commits: d19e840\n- Files: 3 (2 shared). Source: src/pantry/worker.py (shared with F1, F8), src/pantry/config.py (shared with F2)\n- Depends on: F2 (limits are configured per queue), F6 (limits apply per lane)\n- Fit: tension. ADR-004's single-threaded worker has no notion of concurrent jobs; this assumes a thread pool.\n- Status: open", "order": 6}, {"id": "F8", "title": "Graceful shutdown drains in-flight jobs", "kind": "feature", "description": "On SIGTERM the daemon stops taking new jobs and waits for running ones to finish, up to a configurable grace period.", "why": "\"deploys killed jobs halfway through\" (commit 6e2d415).", "size": "+85 / -9 across 3 files", "commits": "6e2d415", "files": "3 (1 shared). Source: src/pantry/shutdown.py (new), src/pantry/worker.py (shared with F1, F7)", "depends_raw": "none", "depends": [], "fit_raw": "aligned. CONTRIBUTING.md:19 asks that long-running processes handle SIGTERM.", "fit": "aligned", "status_raw": "picked: cherry-pick, batch: shutdown", "status": {"kind": "picked", "mode": "cherry-pick", "batch": "shutdown"}, "notes": [], "notes_inline": "", "raw": "### F8. Graceful shutdown drains in-flight jobs\n\nOn SIGTERM the daemon stops taking new jobs and waits for running ones to finish, up to a configurable grace period.\nWhy: \"deploys killed jobs halfway through\" (commit 6e2d415).\n\n- Size: +85 / -9 across 3 files\n- Commits: 6e2d415\n- Files: 3 (1 shared). Source: src/pantry/shutdown.py (new), src/pantry/worker.py (shared with F1, F7)\n- Depends on: none\n- Fit: aligned. CONTRIBUTING.md:19 asks that long-running processes handle SIGTERM.\n- Status: picked: cherry-pick, batch: shutdown", "order": 7}, {"id": "F9", "title": "Health endpoint", "kind": "feature", "description": "`GET /healthz` returns 200 while the worker loop is alive and 503 once it stalls, for load balancers and orchestrators.", "why": "\"the orchestrator could not tell a stuck daemon from a busy one\" (commit f0a1c93).", "size": "+70 / -0 across 2 files", "commits": "f0a1c93", "files": "2 (0 shared). Source: src/pantry/health.py (new), src/pantry/http.py", "depends_raw": "F1 (uses the request-id middleware)", "depends": ["F1"], "fit_raw": "aligned. README.md:90 says \"a health check is welcome\".", "fit": "aligned", "status_raw": "open", "status": {"kind": "open"}, "notes": [], "notes_inline": "", "raw": "### F9. Health endpoint\n\n`GET /healthz` returns 200 while the worker loop is alive and 503 once it stalls, for load balancers and orchestrators.\nWhy: \"the orchestrator could not tell a stuck daemon from a busy one\" (commit f0a1c93).\n\n- Size: +70 / -0 across 2 files\n- Commits: f0a1c93\n- Files: 2 (0 shared). Source: src/pantry/health.py (new), src/pantry/http.py\n- Depends on: F1 (uses the request-id middleware)\n- Fit: aligned. README.md:90 says \"a health check is welcome\".\n- Status: open", "order": 8}, {"id": "F10", "title": "Prometheus metrics endpoint", "kind": "feature", "description": "`GET /metrics` exposes queue depth, job durations and failure counts in Prometheus text format.", "why": "unstated.", "size": "+190 / -6 across 4 files", "commits": "44cd02e, 9be5f71", "files": "4 (1 shared). Source: src/pantry/metrics.py (new), src/pantry/http.py (shared with F9)", "depends_raw": "F9 (registers on the same HTTP server), F1", "depends": ["F9", "F1"], "fit_raw": "tension. CONTRIBUTING.md:44 says new runtime dependencies need an ADR; this adds `prometheus-client`.", "fit": "tension", "status_raw": "open", "status": {"kind": "open"}, "notes": [], "notes_inline": "", "raw": "### F10. Prometheus metrics endpoint\n\n`GET /metrics` exposes queue depth, job durations and failure counts in Prometheus text format.\nWhy: unstated.\n\n- Size: +190 / -6 across 4 files\n- Commits: 44cd02e, 9be5f71\n- Files: 4 (1 shared). Source: src/pantry/metrics.py (new), src/pantry/http.py (shared with F9)\n- Depends on: F9 (registers on the same HTTP server), F1\n- Fit: tension. CONTRIBUTING.md:44 says new runtime dependencies need an ADR; this adds `prometheus-client`.\n- Status: open", "order": 9}, {"id": "F11", "title": "Admin CLI for jobs", "kind": "feature", "description": "`pantryctl jobs list|show|retry|cancel` lets an operator inspect and act on jobs from a shell.", "why": "\"we were running SQL by hand\" (commit b82f6a4).", "size": "+310 / -0 across 5 files", "commits": "b82f6a4, 73e9d0c", "files": "5 (1 shared). Source: src/pantryctl/ (new), src/pantry/cli.py (shared with F2)", "depends_raw": "F3 (reads the job table), F5 (the `retry` subcommand replays dead letters)", "depends": ["F3", "F5"], "fit_raw": "aligned. docs/design.md:61 sketches a control CLI.", "fit": "aligned", "status_raw": "open", "status": {"kind": "open"}, "notes": [], "notes_inline": "", "raw": "### F11. Admin CLI for jobs\n\n`pantryctl jobs list|show|retry|cancel` lets an operator inspect and act on jobs from a shell.\nWhy: \"we were running SQL by hand\" (commit b82f6a4).\n\n- Size: +310 / -0 across 5 files\n- Commits: b82f6a4, 73e9d0c\n- Files: 5 (1 shared). Source: src/pantryctl/ (new), src/pantry/cli.py (shared with F2)\n- Depends on: F3 (reads the job table), F5 (the `retry` subcommand replays dead letters)\n- Fit: aligned. docs/design.md:61 sketches a control CLI.\n- Status: open", "order": 10}, {"id": "F12", "title": "Web admin UI", "kind": "feature", "description": "A small single-page web app lists queues and jobs, with buttons to retry and cancel, served from the daemon itself.", "why": "\"the CLI is not for the support team\" (commit e61f3b8).", "size": "+1,420 / -0 across 22 files", "commits": "e61f3b8, 02d7aa4, c5b9e61", "files": "22 (1 shared). Source: web/ (new), src/pantry/http.py (shared with F9, F10)", "depends_raw": "F11 (calls the same actions), F10 (draws charts from /metrics)", "depends": ["F11", "F10"], "fit_raw": "conflict. README.md:12 states \"no web UI; the daemon is headless by design\".", "fit": "conflict", "status_raw": "open", "status": {"kind": "open"}, "notes": [], "notes_inline": "", "raw": "### F12. Web admin UI\n\nA small single-page web app lists queues and jobs, with buttons to retry and cancel, served from the daemon itself.\nWhy: \"the CLI is not for the support team\" (commit e61f3b8).\n\n- Size: +1,420 / -0 across 22 files\n- Commits: e61f3b8, 02d7aa4, c5b9e61\n- Files: 22 (1 shared). Source: web/ (new), src/pantry/http.py (shared with F9, F10)\n- Depends on: F11 (calls the same actions), F10 (draws charts from /metrics)\n- Fit: conflict. README.md:12 states \"no web UI; the daemon is headless by design\".\n- Status: open", "order": 11}, {"id": "F13", "title": "Scheduled (cron-style) jobs", "kind": "feature", "description": "A job can be registered with a cron expression and the daemon enqueues it on schedule, instead of relying on an external cron.", "why": "\"cron on three hosts fired the same job three times\" (commit 1ae48d7).", "size": "+260 / -14 across 5 files", "commits": "1ae48d7, 8d03fb6", "files": "5 (2 shared). Source: src/pantry/schedule.py (new), src/pantry/queue.py (shared with F3, F6)", "depends_raw": "F3 (schedule state is persisted), F6 (scheduled jobs pick a lane)", "depends": ["F3", "F6"], "fit_raw": "tension. ADR-005 says \"scheduling is the caller's job\".", "fit": "tension", "status_raw": "open", "status": {"kind": "open"}, "notes": [], "notes_inline": "", "raw": "### F13. Scheduled (cron-style) jobs\n\nA job can be registered with a cron expression and the daemon enqueues it on schedule, instead of relying on an external cron.\nWhy: \"cron on three hosts fired the same job three times\" (commit 1ae48d7).\n\n- Size: +260 / -14 across 5 files\n- Commits: 1ae48d7, 8d03fb6\n- Files: 5 (2 shared). Source: src/pantry/schedule.py (new), src/pantry/queue.py (shared with F3, F6)\n- Depends on: F3 (schedule state is persisted), F6 (scheduled jobs pick a lane)\n- Fit: tension. ADR-005 says \"scheduling is the caller's job\".\n- Status: open", "order": 12}, {"id": "F14", "title": "Signed job payloads (HMAC)", "kind": "feature", "description": "Payloads are signed when enqueued and verified before running, so a tampered row is rejected.", "why": "\"the queue file is world-readable on shared hosts\" (commit a2e07c8).", "size": "+120 / -3 across 3 files", "commits": "a2e07c8", "files": "3 (1 shared). Source: src/pantry/signing.py (new), src/pantry/config.py (shared with F2)", "depends_raw": "F2 (the signing key comes from config)", "depends": ["F2"], "fit_raw": "aligned. CONTRIBUTING.md:52 asks for integrity checks on persisted data.", "fit": "aligned", "status_raw": "left", "status": {"kind": "left"}, "notes": [], "notes_inline": "", "raw": "### F14. Signed job payloads (HMAC)\n\nPayloads are signed when enqueued and verified before running, so a tampered row is rejected.\nWhy: \"the queue file is world-readable on shared hosts\" (commit a2e07c8).\n\n- Size: +120 / -3 across 3 files\n- Commits: a2e07c8\n- Files: 3 (1 shared). Source: src/pantry/signing.py (new), src/pantry/config.py (shared with F2)\n- Depends on: F2 (the signing key comes from config)\n- Fit: aligned. CONTRIBUTING.md:52 asks for integrity checks on persisted data.\n- Status: left", "order": 13}, {"id": "F15", "title": "Job timeouts with cancellation", "kind": "feature", "description": "A job that runs past its timeout is cancelled cooperatively, and killed if it ignores the cancellation.", "why": "\"a hung job held a worker slot for nine days\" (commit 37b5d1e).", "size": "+175 / -20 across 4 files", "commits": "37b5d1e, c0f9a42", "files": "4 (2 shared). Source: src/pantry/timeout.py (new), src/pantry/worker.py (shared with F1, F7, F8)", "depends_raw": "F8 (reuses the drain/cancel path), F4 (a timeout counts as a failed attempt)", "depends": ["F8", "F4"], "fit_raw": "tension. Cooperative cancellation needs a second thread; ADR-004.", "fit": "tension", "status_raw": "open", "status": {"kind": "open"}, "notes": [], "notes_inline": "", "raw": "### F15. Job timeouts with cancellation\n\nA job that runs past its timeout is cancelled cooperatively, and killed if it ignores the cancellation.\nWhy: \"a hung job held a worker slot for nine days\" (commit 37b5d1e).\n\n- Size: +175 / -20 across 4 files\n- Commits: 37b5d1e, c0f9a42\n- Files: 4 (2 shared). Source: src/pantry/timeout.py (new), src/pantry/worker.py (shared with F1, F7, F8)\n- Depends on: F8 (reuses the drain/cancel path), F4 (a timeout counts as a failed attempt)\n- Fit: tension. Cooperative cancellation needs a second thread; ADR-004.\n- Status: open", "order": 14}, {"id": "F16", "title": "Webhook notification when a job dead-letters", "kind": "feature", "description": "An operator-configured URL receives a POST with the job summary when a job lands in the dead-letter table.", "why": "\"we found dead jobs a week late\" (commit 9d44e6b).", "size": "+110 / -0 across 3 files", "commits": "9d44e6b", "files": "3 (1 shared). Source: src/pantry/notify.py (new), src/pantry/config.py (shared with F2)", "depends_raw": "F5 (fires on the dead-letter event), F2 (URL from config), F1 (line to edit: log context in `notify._post`)", "depends": ["F5", "F2", "F1"], "fit_raw": "aligned. README.md:95 mentions \"outgoing hooks\" as welcome.", "fit": "aligned", "status_raw": "open", "status": {"kind": "open"}, "notes": [{"date": "2026-10-02", "kind": "note", "round": null, "qid": null, "text": "A shared secret for the webhook is stored in plain config; check whether F14's signing key can be reused."}], "notes_inline": "", "raw": "### F16. Webhook notification when a job dead-letters\n\nAn operator-configured URL receives a POST with the job summary when a job lands in the dead-letter table.\nWhy: \"we found dead jobs a week late\" (commit 9d44e6b).\n\n- Size: +110 / -0 across 3 files\n- Commits: 9d44e6b\n- Files: 3 (1 shared). Source: src/pantry/notify.py (new), src/pantry/config.py (shared with F2)\n- Depends on: F5 (fires on the dead-letter event), F2 (URL from config), F1 (line to edit: log context in `notify._post`)\n- Fit: aligned. README.md:95 mentions \"outgoing hooks\" as welcome.\n- Status: open\n- Notes:\n  - 2026-10-02 Note: A shared secret for the webhook is stored in plain config; check whether F14's signing key can be reused.", "order": 15}, {"id": "F17", "title": "Multi-tenant namespaces", "kind": "feature", "description": "Queues, jobs and config can be scoped to a tenant name, and tenants cannot see each other's jobs.", "why": "\"we host three customers on one daemon\" (commit 55e1d0b).", "size": "+640 / -210 across 14 files", "commits": "55e1d0b, 61c8fa2, d7a03e9", "files": "14 (6 shared). Source: src/pantry/tenancy.py (new), src/pantry/store.py (shared with F3), src/pantry/config.py (shared with F2)", "depends_raw": "F3, F2, F7 (per-tenant concurrency)", "depends": ["F3", "F2", "F7"], "fit_raw": "conflict. README.md:12 and ADR-001 describe a single-tenant daemon; every public function would change.", "fit": "conflict", "status_raw": "open", "status": {"kind": "open"}, "notes": [], "notes_inline": "", "raw": "### F17. Multi-tenant namespaces\n\nQueues, jobs and config can be scoped to a tenant name, and tenants cannot see each other's jobs.\nWhy: \"we host three customers on one daemon\" (commit 55e1d0b).\n\n- Size: +640 / -210 across 14 files\n- Commits: 55e1d0b, 61c8fa2, d7a03e9\n- Files: 14 (6 shared). Source: src/pantry/tenancy.py (new), src/pantry/store.py (shared with F3), src/pantry/config.py (shared with F2)\n- Depends on: F3, F2, F7 (per-tenant concurrency)\n- Fit: conflict. README.md:12 and ADR-001 describe a single-tenant daemon; every public function would change.\n- Status: open", "order": 16}, {"id": "Plumbing", "title": "Dependency bumps, CI cache, renames", "kind": "plumbing", "description": "Formatting, lockfile updates, the CI cache key and a package rename, with no user-facing intent.", "why": "unstated.", "size": "+310 / -290 across 18 files", "commits": "1f0c2b7, 8a6d9e4, c71e0b3", "files": "18 (0 shared). Source: pyproject.toml, uv.lock, .github/workflows/ci.yml", "depends_raw": "none", "depends": [], "fit_raw": "aligned. Nothing here touches behaviour.", "fit": "aligned", "status_raw": "open", "status": {"kind": "open"}, "notes": [], "notes_inline": "", "raw": "### Plumbing. Dependency bumps, CI cache, renames\n\nFormatting, lockfile updates, the CI cache key and a package rename, with no user-facing intent.\nWhy: unstated.\n\n- Size: +310 / -290 across 18 files\n- Commits: 1f0c2b7, 8a6d9e4, c71e0b3\n- Files: 18 (0 shared). Source: pyproject.toml, uv.lock, .github/workflows/ci.yml\n- Depends on: none\n- Fit: aligned. Nothing here touches behaviour.\n- Status: open", "order": 17}, {"id": "Head-only", "title": "Fork docs, deployment config, persona", "kind": "headonly", "description": "The fork's own README banner, Kubernetes manifests and deploy scripts.", "why": "unstated.", "size": "+480 / -12 across 17 files", "commits": "2b9e7a0, f44d1c6", "files": "17 (0 shared). Source: deploy/**, FORK.md, README.md (banner only)", "depends_raw": "none", "depends": [], "fit_raw": "conflict. FORK.md:7 keeps deployment config off upstream.", "fit": "conflict", "status_raw": "open", "status": {"kind": "open"}, "notes": [], "notes_inline": "", "raw": "### Head-only. Fork docs, deployment config, persona\n\nThe fork's own README banner, Kubernetes manifests and deploy scripts.\nWhy: unstated.\n\n- Size: +480 / -12 across 17 files\n- Commits: 2b9e7a0, f44d1c6\n- Files: 17 (0 shared). Source: deploy/**, FORK.md, README.md (banner only)\n- Depends on: none\n- Fit: conflict. FORK.md:7 keeps deployment config off upstream.\n- Status: open", "order": 18}, {"id": "S1", "title": "Token-bucket rate limiter (rebuilt on upstream, merged back)", "kind": "setaside", "description": "The rate limiter the fork wrote was rebuilt onto upstream last month and merged back, so the fork's original commits show in the log.", "why": "\"limit abusive enqueuers\" (commit 4d8e2c1).", "size": "+140 / -0 across 3 files", "commits": "4d8e2c1, 90b3ae7", "files": "3 (0 shared). Source: src/pantry/ratelimit.py", "depends_raw": "none", "depends": [], "fit_raw": "aligned. Already on base.", "fit": "aligned", "status_raw": "landed: already on base", "status": {"kind": "landed", "branch": "already on base", "on_base": true}, "notes": [{"kind": "plain", "text": "Evidence: upstream/main src/pantry/ratelimit.py has the same bucket logic (merge 5aa3c10); pass 3."}], "notes_inline": "", "raw": "### S1. Token-bucket rate limiter (rebuilt on upstream, merged back)\n\nThe rate limiter the fork wrote was rebuilt onto upstream last month and merged back, so the fork's original commits show in the log.\nWhy: \"limit abusive enqueuers\" (commit 4d8e2c1).\n\n- Size: +140 / -0 across 3 files\n- Commits: 4d8e2c1, 90b3ae7\n- Files: 3 (0 shared). Source: src/pantry/ratelimit.py\n- Depends on: none\n- Fit: aligned. Already on base.\n- Status: landed: already on base\n- Notes:\n  - Evidence: upstream/main src/pantry/ratelimit.py has the same bucket logic (merge 5aa3c10); pass 3.", "order": 19}, {"id": "S2", "title": "`--version` flag", "kind": "setaside", "description": "`pantry --version` prints the package version.", "why": "unstated.", "size": "+12 / -0 across 1 file", "commits": "6c1d0fa", "files": "1 (0 shared). Source: src/pantry/cli.py", "depends_raw": "none", "depends": [], "fit_raw": "aligned. Already on base.", "fit": "aligned", "status_raw": "landed: already on base", "status": {"kind": "landed", "branch": "already on base", "on_base": true}, "notes": [{"kind": "plain", "text": "Evidence: patch-equivalent commit on base (pass 1, `git log --cherry-pick`)."}], "notes_inline": "", "raw": "### S2. `--version` flag\n\n`pantry --version` prints the package version.\nWhy: unstated.\n\n- Size: +12 / -0 across 1 file\n- Commits: 6c1d0fa\n- Files: 1 (0 shared). Source: src/pantry/cli.py\n- Depends on: none\n- Fit: aligned. Already on base.\n- Status: landed: already on base\n- Notes:\n  - Evidence: patch-equivalent commit on base (pass 1, `git log --cherry-pick`).", "order": 20}]}
+  with the parsed ledger. The page never edits the ledger; it produces a harvest-responses/1 file.
+  Offline, single file, no CDN, no framework, no web fonts.
+-->
+<style>
+:root{
+  --sans: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --mono: "JetBrains Mono", "SF Mono", ui-monospace, Menlo, Consolas, "Liberation Mono", "DejaVu Sans Mono", monospace;
+  --ease: cubic-bezier(.2,.75,.25,1);
+  --top: 56px;
+}
+/* Light: bone drafting paper, petrol ink */
+:root{
+  --bg:#ece7dc; --grid:rgba(15,35,41,.055); --pane:#f4f1ea; --surface:#fcfbf8; --surface-2:#f3efe6; --sunk:#e6e0d3;
+  --line:#dcd4c4; --line-2:#c6bca8; --ink:#0f2329; --ink-2:#3f5257; --ink-3:#5a6a6e;
+  --teal:#0a7268; --teal-ink:#ffffff; --teal-soft:rgba(10,114,104,.09); --teal-line:rgba(10,114,104,.38); --teal-text:#08655c;
+  --verm:#b93a14; --verm-soft:rgba(197,64,24,.08); --verm-line:rgba(185,58,20,.42);
+  --ochre:#83590a; --ochre-soft:rgba(176,124,20,.12);
+  --done:#4a6a62; --done-soft:rgba(74,106,98,.12);
+  --sel:rgba(10,114,104,.075);
+  --shadow:0 1px 0 rgba(15,35,41,.05), 0 10px 30px -14px rgba(15,35,41,.28);
+  --shadow-lg:0 2px 0 rgba(15,35,41,.04), 0 30px 80px -20px rgba(15,35,41,.45);
+  --scrim:rgba(20,30,32,.38);
+  color-scheme: light;
+}
+/* Dark: petrol drafting ground, bone linework */
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#081215; --grid:rgba(235,230,218,.035); --pane:#0b171b; --surface:#0f1f24; --surface-2:#14282e; --sunk:#071013;
+  --line:#1d3238; --line-2:#2b464d; --ink:#ebe6da; --ink-2:#aab4af; --ink-3:#7e8c89;
+  --teal:#4fd1bf; --teal-ink:#04211d; --teal-soft:rgba(79,209,191,.11); --teal-line:rgba(79,209,191,.42); --teal-text:#6fdccc;
+  --verm:#ff7a52; --verm-soft:rgba(255,112,70,.11); --verm-line:rgba(255,122,82,.5);
+  --ochre:#e8b964; --ochre-soft:rgba(232,185,100,.12);
+  --done:#a9c4b9; --done-soft:rgba(169,196,185,.1);
+  --sel:rgba(79,209,191,.07);
+  --shadow:0 1px 0 rgba(0,0,0,.2), 0 12px 30px -14px rgba(0,0,0,.7);
+  --shadow-lg:0 30px 90px -20px rgba(0,0,0,.85);
+  --scrim:rgba(2,8,10,.62);
+  color-scheme: dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#081215; --grid:rgba(235,230,218,.035); --pane:#0b171b; --surface:#0f1f24; --surface-2:#14282e; --sunk:#071013;
+  --line:#1d3238; --line-2:#2b464d; --ink:#ebe6da; --ink-2:#aab4af; --ink-3:#7e8c89;
+  --teal:#4fd1bf; --teal-ink:#04211d; --teal-soft:rgba(79,209,191,.11); --teal-line:rgba(79,209,191,.42); --teal-text:#6fdccc;
+  --verm:#ff7a52; --verm-soft:rgba(255,112,70,.11); --verm-line:rgba(255,122,82,.5);
+  --ochre:#e8b964; --ochre-soft:rgba(232,185,100,.12);
+  --done:#a9c4b9; --done-soft:rgba(169,196,185,.1);
+  --sel:rgba(79,209,191,.07);
+  --shadow:0 1px 0 rgba(0,0,0,.2), 0 12px 30px -14px rgba(0,0,0,.7);
+  --shadow-lg:0 30px 90px -20px rgba(0,0,0,.85);
+  --scrim:rgba(2,8,10,.62);
+  color-scheme: dark;
+}
+
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 var(--sans);-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;font-feature-settings:"cv11","ss01"}
+button,input,textarea{font:inherit;color:inherit}
+button{cursor:pointer;background:none;border:0;padding:0}
+code,kbd,.mono{font-family:var(--mono);font-size:.86em;font-feature-settings:normal}
+:focus-visible{outline:2px solid var(--teal);outline-offset:2px;border-radius:4px}
+::selection{background:var(--teal-soft)}
+svg.i{width:16px;height:16px;flex:none;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;vertical-align:-3px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+kbd{display:inline-grid;place-items:center;min-width:18px;height:18px;padding:0 4px;border:1px solid var(--line-2);border-bottom-width:2px;border-radius:4px;font-size:10.5px;line-height:1;color:var(--ink-3);background:var(--surface)}
+
+/* ---------------------------------------------------------------- app shell */
+.app{display:grid;grid-template-rows:var(--top) auto minmax(0,1fr);height:100vh;height:100dvh}
+.top{display:flex;align-items:center;gap:18px;padding:0 14px 0 18px;border-bottom:1px solid var(--line);background:var(--pane);position:relative;z-index:5;min-width:0}
+.brand{display:flex;align-items:center;gap:9px;flex:none}
+.brand .word{font-weight:500;font-size:19px;letter-spacing:-.02em}
+.brand .reg{color:var(--verm);width:18px;height:18px}
+.refs{display:flex;align-items:center;gap:7px;font-family:var(--mono);font-size:12px;color:var(--ink-2);min-width:0;flex:0 1 auto;white-space:nowrap}
+.refs .ref{overflow:hidden;text-overflow:ellipsis}
+.refs .arrow{color:var(--ink-3)}
+.round{font-family:var(--mono);font-size:11px;letter-spacing:.04em;text-transform:uppercase;color:var(--teal-text);border:1px solid var(--teal-line);border-radius:99px;padding:1px 8px;white-space:nowrap}
+.views{display:flex;gap:2px;padding:3px;border-radius:9px;background:var(--sunk);flex:none}
+.views button{display:flex;align-items:center;gap:6px;padding:4px 11px;border-radius:7px;color:var(--ink-2);font-size:13px;font-weight:500}
+.views button:hover{color:var(--ink)}
+.views button[aria-selected="true"]{background:var(--surface);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.08),0 0 0 1px var(--line)}
+.views .n{font-family:var(--mono);font-size:10.5px;color:var(--verm)}
+.grow{flex:1;min-width:0}
+.progress{display:flex;align-items:center;gap:10px;min-width:0}
+.segs{display:flex;gap:2px;height:14px;align-items:stretch;width:clamp(120px,16vw,260px)}
+.seg{flex:1;border-radius:2px;background:transparent;box-shadow:inset 0 0 0 1px var(--line-2);position:relative;transition:background .25s var(--ease),box-shadow .25s}
+.seg.picked{background:var(--teal);box-shadow:none}
+.seg.left{background:var(--ink-3);opacity:.55;box-shadow:none}
+.seg.landed{background:var(--done);opacity:.75;box-shadow:none}
+.seg.warn::after{content:"";position:absolute;left:0;right:0;top:-4px;height:2px;border-radius:2px;background:var(--verm)}
+.seg.cur{outline:1.5px solid var(--ink);outline-offset:1px}
+.seg:hover{filter:brightness(1.15)}
+.ptext{font-family:var(--mono);font-size:12px;color:var(--ink-2);white-space:nowrap}
+.ptext b{color:var(--ink);font-weight:600}
+.saved{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--ink-3);white-space:nowrap}
+.saved.bad{color:var(--verm)}
+.ibtn{display:grid;place-items:center;width:32px;height:32px;border-radius:8px;color:var(--ink-2);flex:none}
+.ibtn:hover{background:var(--sunk);color:var(--ink)}
+.btn{display:inline-flex;align-items:center;gap:7px;height:32px;padding:0 13px;border-radius:8px;border:1px solid var(--line-2);background:var(--surface);font-weight:500;font-size:13px;white-space:nowrap;transition:background .15s,border-color .15s,transform .1s}
+.btn:hover{border-color:var(--ink-3)}
+.btn:active{transform:translateY(1px)}
+.btn.primary{background:var(--teal);border-color:var(--teal);color:var(--teal-ink)}
+.btn.primary:hover{filter:brightness(1.07)}
+.btn.ghost{border-color:transparent;background:transparent;color:var(--ink-2)}
+.btn.ghost:hover{background:var(--sunk);color:var(--ink)}
+.btn.danger{color:var(--verm);border-color:var(--verm-line)}
+.btn.sm{height:28px;padding:0 10px;font-size:12.5px}
+.btn kbd{margin-left:2px;background:transparent;border:0;opacity:.7;color:inherit;font-size:11px;min-width:0;padding:0}
+.send.ready{animation:glow 2.4s var(--ease) 1}
+@keyframes glow{0%{box-shadow:0 0 0 0 var(--teal-line)}40%{box-shadow:0 0 0 7px transparent}100%{box-shadow:0 0 0 0 transparent}}
+
+.notices{display:flex;flex-direction:column}
+.notice{display:flex;gap:10px;align-items:flex-start;padding:8px 18px;font-size:13px;border-bottom:1px solid var(--line);background:var(--verm-soft);color:var(--ink)}
+.notice .i{color:var(--verm);margin-top:2px}
+.notice details summary{cursor:pointer;color:var(--ink-2)}
+.notice ul{margin:4px 0 0 16px;padding:0;font-family:var(--mono);font-size:12px;color:var(--ink-2)}
+.notice .x{margin-left:auto;color:var(--ink-3)}
+
+main{min-height:0;position:relative}
+.view{position:absolute;inset:0;display:none;min-height:0}
+.app[data-view="review"] .view-review,.app[data-view="map"] .view-map,.app[data-view="plan"] .view-plan{display:grid}
+
+/* ---------------------------------------------------------------- review: list pane */
+.view-review{grid-template-columns:clamp(300px,31vw,410px) minmax(0,1fr)}
+.lpane{display:flex;flex-direction:column;min-height:0;border-right:1px solid var(--line);background:var(--pane)}
+.lhead{padding:12px 12px 8px;display:flex;flex-direction:column;gap:9px;border-bottom:1px solid var(--line)}
+.search{display:flex;align-items:center;gap:8px;height:34px;padding:0 10px;border-radius:8px;background:var(--surface);border:1px solid var(--line);color:var(--ink-3)}
+.search:focus-within{border-color:var(--teal);box-shadow:0 0 0 3px var(--teal-soft)}
+.search input{flex:1;min-width:0;border:0;background:none;outline:none;color:var(--ink);height:100%}
+.filters{display:flex;gap:4px;flex-wrap:wrap}
+.chip{display:inline-flex;align-items:center;gap:5px;height:24px;padding:0 9px;border-radius:99px;font-size:12px;color:var(--ink-2);border:1px solid var(--line);background:var(--surface)}
+.chip:hover{border-color:var(--line-2);color:var(--ink)}
+.chip .c{font-family:var(--mono);font-size:10.5px;color:var(--ink-3)}
+.chip[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--pane)}
+.chip[aria-pressed="true"] .c{color:inherit;opacity:.7}
+.chip.attn .c{color:var(--verm)}
+.chip.attn[aria-pressed="true"]{background:var(--verm);border-color:var(--verm);color:#fff}
+.chip.new .c{color:var(--teal-text)}
+.roundnote{display:flex;gap:10px;align-items:center;margin:10px 12px 2px;padding:9px 11px;border-radius:9px;background:var(--teal-soft);border:1px solid var(--teal-line);font-size:12.5px;color:var(--ink)}
+.roundnote .spark{color:var(--teal-text)}
+.roundnote button{margin-left:auto;color:var(--teal-text);font-weight:600;font-size:12.5px;white-space:nowrap}
+.list{flex:1;overflow:auto;padding:4px 0 24px;scroll-padding:40px 0}
+.grp{position:sticky;top:0;z-index:1;display:flex;align-items:baseline;gap:8px;padding:12px 16px 6px;background:var(--pane);font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3)}
+.grp .hint{font-family:var(--mono);font-weight:400;letter-spacing:0;text-transform:none;font-size:11px;opacity:.8}
+.grp::after{content:"";flex:1;border-top:1px dashed var(--line-2);transform:translateY(-3px)}
+.row{position:relative;display:grid;grid-template-columns:16px 38px minmax(0,1fr) auto;align-items:start;column-gap:8px;padding:9px 14px 9px 14px;margin:1px 6px;border-radius:9px;cursor:pointer;user-select:none;transition:background .12s}
+.row:hover{background:var(--surface-2)}
+.row.sel{background:var(--surface);box-shadow:0 0 0 1px var(--line-2),var(--shadow)}
+.row.sel::before{content:"";position:absolute;left:-6px;top:10px;bottom:10px;width:3px;border-radius:0 3px 3px 0;background:var(--teal)}
+.row .node{margin-top:4px}
+.rid{font-family:var(--mono);font-size:12px;color:var(--ink-3);margin-top:1px;white-space:nowrap}
+.row.sel .rid{color:var(--ink)}
+.rmain{min-width:0}
+.rtitle{display:block;font-weight:500;font-size:13.5px;line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rsub{display:flex;gap:6px;align-items:center;margin-top:2px;font-size:12px;color:var(--ink-3);white-space:nowrap;min-width:0}
+.rsub .dec{overflow:hidden;text-overflow:ellipsis}
+.rsub .dec.picked{color:var(--teal-text)}
+.rsub .dec .b{font-family:var(--mono);font-size:11px;opacity:.85}
+.row.s-left .rtitle{color:var(--ink-3);text-decoration:line-through;text-decoration-color:var(--line-2)}
+.row.s-landed .rtitle,.row.s-aside .rtitle{color:var(--ink-2)}
+.rflags{display:flex;gap:6px;align-items:center;margin-top:2px;color:var(--ink-3);font-size:11.5px;font-family:var(--mono)}
+.rflags .w{color:var(--verm)}
+.rflags .q{display:flex;align-items:center;gap:2px}
+.rflags .ed{width:6px;height:6px;border-radius:1px;transform:rotate(45deg);background:var(--ink-2)}
+.newdot{width:7px;height:7px;border-radius:99px;background:var(--teal);box-shadow:0 0 0 3px var(--teal-soft)}
+.fitm{font-size:11px;padding:0 6px;border-radius:4px;line-height:17px}
+.fit-aligned{color:var(--ink-3)}
+.fit-tension{color:var(--ochre);background:var(--ochre-soft)}
+.fit-conflict{color:var(--verm);background:var(--verm-soft)}
+.rel{position:absolute;right:100%;top:50%;transform:translate(10px,-50%);font-size:10px;color:var(--teal-text);opacity:0}
+.row.rel-up,.row.rel-down{background:var(--sel)}
+.row.rel-up .relmark,.row.rel-down .relmark{opacity:1}
+.relmark{position:absolute;left:0;top:50%;transform:translateY(-50%);font-family:var(--mono);font-size:12px;font-weight:600;color:var(--teal-text);opacity:0;width:12px;text-align:center}
+.empty{padding:30px 20px;text-align:center;color:var(--ink-3);font-size:13px}
+
+/* state nodes (shared) */
+.node{display:inline-block;width:12px;height:12px;border-radius:99px;flex:none;position:relative;box-shadow:inset 0 0 0 1.5px var(--ink-3);transition:transform .25s var(--ease),background .2s,box-shadow .2s}
+.node.picked{background:var(--teal);box-shadow:inset 0 0 0 1.5px var(--teal)}
+.node.left{box-shadow:inset 0 0 0 1.5px var(--line-2)}
+.node.left::after{content:"";position:absolute;left:2px;right:2px;top:50%;height:1.5px;background:var(--ink-3);transform:rotate(-45deg)}
+.node.landed{background:var(--done);box-shadow:inset 0 0 0 1.5px var(--done)}
+.node.landed::after{content:"";position:absolute;left:3.6px;top:2px;width:3px;height:6px;border:solid var(--pane);border-width:0 1.6px 1.6px 0;transform:rotate(45deg)}
+.node.aside{background:transparent;box-shadow:inset 0 0 0 1.5px var(--done);opacity:.7}
+.node.warn{box-shadow:inset 0 0 0 1.5px var(--teal),0 0 0 3px var(--verm-soft),0 0 0 1.5px var(--verm)}
+.node.pop{animation:pop .35s var(--ease)}
+@keyframes pop{0%{transform:scale(.6)}60%{transform:scale(1.25)}100%{transform:scale(1)}}
+
+/* ---------------------------------------------------------------- review: detail pane */
+.dpane{display:flex;flex-direction:column;min-height:0;min-width:0;
+  background-color:var(--bg);background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);background-size:24px 24px;background-position:-1px -1px}
+.dscroll{flex:1;overflow:auto;padding:28px 32px 40px;scroll-behavior:auto}
+.sheet{position:relative;max-width:840px;margin:0 auto;background:var(--surface);border:1px solid var(--line);border-radius:4px;box-shadow:var(--shadow);padding:30px 38px 34px}
+.regm{position:absolute;width:14px;height:14px;color:var(--verm);opacity:.75;pointer-events:none}
+.regm.tl{left:-7px;top:-7px}.regm.tr{right:-7px;top:-7px}.regm.bl{left:-7px;bottom:-7px}.regm.br{right:-7px;bottom:-7px}
+.back{display:none}
+.kicker{display:flex;align-items:center;gap:10px;font-family:var(--mono);font-size:12px;color:var(--ink-3);margin-bottom:12px}
+.kicker .eid{color:var(--ink);font-weight:600;font-size:13px}
+.kicker .rule{flex:1;border-top:1px dashed var(--line-2)}
+.kicker .nav{display:flex;gap:2px}
+.kicker .nav button{display:grid;place-items:center;width:26px;height:26px;border-radius:6px;color:var(--ink-3)}
+.kicker .nav button:hover{background:var(--sunk);color:var(--ink)}
+.kicker .nav button[disabled]{opacity:.3;cursor:default;background:none}
+h2.title{font-size:27px;line-height:1.18;letter-spacing:-.022em;font-weight:600;margin:0 0 10px;text-wrap:balance}
+.lede{font-size:16px;line-height:1.55;color:var(--ink-2);margin:0;text-wrap:pretty}
+.why{margin:18px 0 0;padding:2px 0 2px 16px;border-left:2px solid var(--line-2);font-size:14px;color:var(--ink-2)}
+.why .lbl{display:block;font-size:10.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);margin-bottom:2px}
+.why q{font-style:italic;color:var(--ink);quotes:"\201C" "\201D"}
+.stats{display:flex;flex-wrap:wrap;gap:6px 18px;align-items:center;margin-top:18px;font-family:var(--mono);font-size:12px;color:var(--ink-3)}
+.stats .add{color:var(--teal-text)} .stats .del{color:var(--verm)}
+.dstat{display:inline-flex;gap:2px;margin-left:6px;vertical-align:-1px}
+.dstat i{width:8px;height:8px;border-radius:1.5px;background:var(--line)}
+.dstat i.a{background:var(--teal)} .dstat i.d{background:var(--verm)}
+.sizebar{display:inline-block;width:70px;height:4px;border-radius:2px;background:var(--line);vertical-align:middle;margin-left:6px;position:relative;overflow:hidden}
+.sizebar i{position:absolute;inset:0 auto 0 0;background:var(--ink-3);border-radius:2px}
+.sec{margin-top:28px}
+.sech{display:flex;align-items:center;gap:8px;font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);margin:0 0 10px}
+.sech::after{content:"";flex:1;border-top:1px solid var(--line)}
+.sech .c{font-family:var(--mono);letter-spacing:0}
+.two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px;align-items:start}
+.card{border:1px solid var(--line);border-radius:10px;padding:13px 15px;background:var(--surface)}
+.fitcard{display:flex;flex-direction:column;gap:6px}
+.fitbadge{display:inline-flex;align-items:center;gap:6px;font-weight:600;font-size:13px}
+.fitbadge .dot{width:8px;height:8px;border-radius:99px}
+.fitcard.aligned .fitbadge{color:var(--teal-text)} .fitcard.aligned .dot{background:var(--teal)}
+.fitcard.tension{border-color:color-mix(in srgb,var(--ochre) 35%,var(--line));background:var(--ochre-soft)} .fitcard.tension .fitbadge{color:var(--ochre)} .fitcard.tension .dot{background:var(--ochre)}
+.fitcard.conflict{border-color:var(--verm-line);background:var(--verm-soft)} .fitcard.conflict .fitbadge{color:var(--verm)} .fitcard.conflict .dot{background:var(--verm)}
+.fitcard p{margin:0;font-size:13.5px;line-height:1.5;color:var(--ink)}
+.fitcard .scale{display:flex;gap:3px;margin-left:auto}
+.fitcard .scale i{width:16px;height:4px;border-radius:2px;background:var(--line)}
+.fitcard.aligned .scale i:nth-child(1){background:var(--teal)}
+.fitcard.tension .scale i:nth-child(-n+2){background:var(--ochre)}
+.fitcard.conflict .scale i{background:var(--verm)}
+.cite{font-family:var(--mono);font-size:.86em;padding:0 4px;border-radius:4px;background:var(--sunk);color:var(--ink);white-space:nowrap}
+code{padding:0 4px;border-radius:4px;background:var(--sunk);color:var(--ink)}
+.deps{display:flex;flex-direction:column;gap:2px}
+.deps .dh{font-size:12px;color:var(--ink-3);margin:2px 0 4px}
+.deps .dh + .dh{margin-top:10px}
+.dep{display:grid;grid-template-columns:12px 36px minmax(0,1fr);gap:8px;align-items:start;padding:6px 8px;margin:0 -8px;border-radius:7px;text-align:left;width:calc(100% + 16px)}
+.dep:hover{background:var(--surface-2)}
+.dep .node{margin-top:4px}
+.dep .rid{margin-top:1px}
+.dep .t{font-size:13px;font-weight:500;line-height:1.35;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dep .why2{display:block;font-size:12px;color:var(--ink-3);line-height:1.4}
+.dep .st{font-family:var(--mono);font-size:11px;color:var(--ink-3)}
+.dep .st.bad{color:var(--verm)}
+.dep .st.ok{color:var(--teal-text)}
+.nodeps{font-size:13px;color:var(--ink-3)}
+
+/* resolution cards */
+.resolve{margin-top:22px;border:1px solid var(--verm-line);background:var(--verm-soft);border-radius:12px;padding:14px 16px;animation:rise .3s var(--ease)}
+.resolve.cut{border-color:var(--line-2);background:var(--surface-2)}
+.resolve.info{border-color:var(--line-2);background:var(--surface-2)}
+.resolve h4{display:flex;align-items:center;gap:8px;margin:0 0 4px;font-size:14px;font-weight:600}
+.resolve h4 .i{color:var(--verm)}
+.resolve.cut h4 .i,.resolve.info h4 .i{color:var(--ink-2)}
+.resolve p{margin:0;color:var(--ink-2);font-size:13.5px}
+.resolve .acts{display:flex;flex-wrap:wrap;gap:6px;margin-top:11px}
+.resolve textarea{margin-top:10px}
+.resolve .cuttext{margin-top:6px;font-size:13.5px;color:var(--ink)}
+@keyframes rise{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+
+/* conversation */
+.thread{display:flex;flex-direction:column;gap:14px}
+.msg{display:grid;grid-template-columns:28px minmax(0,1fr);gap:10px}
+.av{width:28px;height:28px;border-radius:99px;display:grid;place-items:center;font-size:11px;font-weight:600;flex:none}
+.av.you{background:var(--sunk);color:var(--ink-2);box-shadow:inset 0 0 0 1px var(--line-2)}
+.av.ai{background:var(--teal-soft);color:var(--teal-text);box-shadow:inset 0 0 0 1px var(--teal-line)}
+.av.ai svg{width:15px;height:15px}
+.av.led{background:var(--surface-2);color:var(--ink-3);box-shadow:inset 0 0 0 1px var(--line)}
+.mh{display:flex;align-items:baseline;gap:8px;font-size:12px;color:var(--ink-3);margin-bottom:2px}
+.mh b{color:var(--ink);font-weight:600;font-size:12.5px}
+.mh .meta{font-family:var(--mono);font-size:11px}
+.mh .tag{font-size:10.5px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;padding:1px 6px;border-radius:4px}
+.tag.new{background:var(--teal);color:var(--teal-ink)}
+.tag.draft{background:var(--sunk);color:var(--ink-2)}
+.tag.note{background:var(--ochre-soft);color:var(--ochre)}
+.mb{font-size:14px;line-height:1.55;white-space:pre-wrap;overflow-wrap:anywhere}
+.msg.answer .mb{background:var(--teal-soft);border:1px solid var(--teal-line);border-radius:4px 12px 12px 12px;padding:9px 12px}
+.msg.answer.fresh .mb{animation:fresh 2.2s var(--ease)}
+@keyframes fresh{0%{box-shadow:0 0 0 0 var(--teal-line)}30%{box-shadow:0 0 0 6px transparent}}
+.msg.wait .mb{border:1px dashed var(--line-2);border-radius:4px 12px 12px 12px;padding:8px 12px;color:var(--ink-3);font-size:13px}
+.msg.mine .mb{background:var(--surface-2);border:1px solid var(--line);border-radius:4px 12px 12px 12px;padding:9px 12px}
+.msg.mine .tools{display:flex;gap:2px;margin-left:auto;opacity:0;transition:opacity .12s}
+.msg.mine:hover .tools,.msg.mine:focus-within .tools{opacity:1}
+.msg.mine .tools button{font-size:12px;color:var(--ink-3);padding:1px 6px;border-radius:5px}
+.msg.mine .tools button:hover{background:var(--sunk);color:var(--ink)}
+.reply{margin-top:8px}
+.composer{margin-top:16px;border:1px solid var(--line-2);border-radius:12px;background:var(--surface);transition:border-color .15s,box-shadow .15s}
+.composer:focus-within{border-color:var(--teal);box-shadow:0 0 0 3px var(--teal-soft)}
+.composer textarea,.tarea{display:block;width:100%;border:0;background:transparent;resize:none;outline:none;padding:11px 13px 4px;min-height:46px;max-height:260px;line-height:1.5;font-size:14px}
+.tarea{border:1px solid var(--line-2);border-radius:9px;background:var(--surface);padding:9px 11px}
+.tarea:focus{border-color:var(--teal);box-shadow:0 0 0 3px var(--teal-soft)}
+.composer .cbar{display:flex;align-items:center;gap:8px;padding:6px 8px 8px 13px}
+.composer .hint{font-size:11.5px;color:var(--ink-3)}
+.facts dl{display:grid;grid-template-columns:96px minmax(0,1fr);gap:8px 14px;margin:0;font-size:13px}
+.facts dt{color:var(--ink-3)}
+.facts dd{margin:0;overflow-wrap:anywhere}
+.facts .sha{display:inline-block;font-family:var(--mono);font-size:11.5px;padding:0 5px;border-radius:4px;background:var(--sunk);margin:0 3px 3px 0}
+details.raw{margin-top:14px}
+details.raw summary{cursor:pointer;font-size:12.5px;color:var(--ink-3);list-style:none;display:inline-flex;gap:6px;align-items:center}
+details.raw summary::-webkit-details-marker{display:none}
+details.raw[open] summary .chev{transform:rotate(90deg)}
+details.raw pre{margin:8px 0 0;padding:12px 14px;border-radius:8px;background:var(--sunk);font-family:var(--mono);font-size:12px;line-height:1.55;white-space:pre-wrap;overflow-wrap:anywhere;color:var(--ink-2)}
+.kindnote{margin-top:16px;padding:10px 13px;border-radius:9px;background:var(--surface-2);border:1px solid var(--line);font-size:13px;color:var(--ink-2);display:flex;gap:9px}
+
+/* decision dock */
+.dock{flex:none;border-top:1px solid var(--line);background:color-mix(in srgb,var(--pane) 92%,transparent);backdrop-filter:blur(8px);padding:10px 32px 12px}
+.dockin{max-width:840px;margin:0 auto}
+.dockl{display:flex;align-items:center;gap:12px;font-size:12.5px;color:var(--ink-3);margin-top:8px;min-height:30px}
+.dockl .dl-t{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dockl b{color:var(--ink);font-weight:600}
+.dockl .was{flex:none;font-family:var(--mono);font-size:11px;color:var(--ink-3);white-space:nowrap}
+.dockl .was button{font-family:var(--sans);font-size:12px;color:var(--teal-text);font-weight:600}
+.dockr{display:flex;gap:8px;align-items:stretch;flex-wrap:wrap}
+.modes{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;flex:1 1 auto}
+.mb2{display:flex;align-items:center;gap:8px;height:40px;padding:0 11px;border-radius:9px;border:1px solid var(--line-2);background:var(--surface);color:var(--ink-2);font-weight:500;font-size:13.5px;transition:all .15s var(--ease);min-width:0}
+.mb2 span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mb2 kbd{margin-left:auto}
+.mb2:hover{border-color:var(--teal-line);color:var(--ink)}
+.mb2[aria-pressed="true"]{background:var(--teal);border-color:var(--teal);color:var(--teal-ink);box-shadow:0 4px 14px -6px var(--teal)}
+.mb2[aria-pressed="true"] kbd{color:inherit;border-color:currentColor;background:transparent;opacity:.6}
+.mb2.leave[aria-pressed="true"]{background:var(--ink-2);border-color:var(--ink-2);color:var(--pane);box-shadow:none}
+.batch{display:flex;align-items:center;height:30px;border:1px solid var(--line-2);border-radius:8px;background:var(--surface);padding:0 4px 0 10px;flex:0 1 330px;min-width:0;animation:rise .25s var(--ease)}
+.batch:focus-within{border-color:var(--teal);box-shadow:0 0 0 3px var(--teal-soft)}
+.batch label{font-size:12px;color:var(--ink-3);margin-right:8px;white-space:nowrap}
+.batch .pre{font-family:var(--mono);font-size:12.5px;color:var(--ink-3)}
+.batch input{flex:1;min-width:40px;border:0;outline:none;background:none;font-family:var(--mono);font-size:12.5px;height:100%}
+.batch input::placeholder{color:var(--ink-3);opacity:.85}
+.dockdone{display:flex;align-items:center;gap:10px;height:40px;font-size:13.5px;color:var(--ink-2)}
+.dockdone .node{width:14px;height:14px}
+
+/* ---------------------------------------------------------------- map */
+.view-map{grid-template-columns:minmax(0,1fr) 340px}
+.mapwrap{position:relative;overflow:auto;min-width:0;background-color:var(--bg);background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px),linear-gradient(color-mix(in srgb,var(--grid) 60%,transparent) 1px,transparent 1px),linear-gradient(90deg,color-mix(in srgb,var(--grid) 60%,transparent) 1px,transparent 1px);background-size:120px 120px,120px 120px,24px 24px,24px 24px}
+.canvas{position:relative;margin:58px auto 190px;}
+.mapwrap > .canvas{left:0}
+.canvas svg.edges{position:absolute;inset:0;overflow:visible;pointer-events:none}
+.edge{fill:none;stroke:var(--line-2);stroke-width:1.4;transition:stroke .2s,opacity .2s}
+.edge.ok{stroke:var(--teal);stroke-width:1.8}
+.edge.bad{stroke:var(--verm);stroke-width:1.8;stroke-dasharray:5 4;animation:dash 1.2s linear infinite}
+.edge.cut{stroke:var(--ink-3);stroke-dasharray:2 4}
+@keyframes dash{to{stroke-dashoffset:-18}}
+.arrowhead{fill:none;stroke:var(--line-2);stroke-width:1.4;transition:opacity .2s}
+.arrowhead.ok{stroke:var(--teal)}.arrowhead.bad{stroke:var(--verm)}.arrowhead.cut{stroke:var(--ink-3)}
+.canvas.focused .edge,.canvas.focused .arrowhead{opacity:.16}
+.canvas.focused .edge.hl,.canvas.focused .arrowhead.hl{opacity:1}
+.canvas.focused .edge.hl:not(.ok):not(.bad):not(.cut){stroke:var(--ink-2)}
+.colh{position:absolute;left:0;font-family:var(--mono);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);white-space:nowrap}
+.mnode{position:absolute;display:grid;grid-template-columns:12px minmax(0,1fr);gap:4px 9px;align-items:start;padding:9px 11px;border-radius:10px;background:var(--surface);border:1px solid var(--line-2);box-shadow:var(--shadow);text-align:left;transition:opacity .2s,transform .15s var(--ease),border-color .15s}
+.mnode:hover{transform:translateY(-1px);border-color:var(--ink-3)}
+.mnode .node{margin-top:3px}
+.mnode .t{font-size:12.5px;font-weight:500;line-height:1.3;height:2.6em;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.mnode .m{grid-column:2;display:flex;gap:6px;align-items:center;font-family:var(--mono);font-size:10.5px;color:var(--ink-3);white-space:nowrap;overflow:hidden}
+.mnode .m .eid{color:var(--ink);font-weight:600}
+.mnode .m .pk{color:var(--teal-text)}
+.mnode.s-picked{border-color:var(--teal-line);background:color-mix(in srgb,var(--teal) 7%,var(--surface))}
+.mnode.s-left{opacity:.62}
+.mnode.s-left .t{text-decoration:line-through;text-decoration-color:var(--line-2)}
+.mnode.s-landed{background:var(--surface-2)}
+.mnode.warn{border-color:var(--verm);box-shadow:0 0 0 3px var(--verm-soft),var(--shadow)}
+.mnode.sel{outline:2px solid var(--ink);outline-offset:3px}
+.canvas.focused .mnode{opacity:.4}
+.canvas.focused .mnode.hl{opacity:1}
+.titleblock{position:absolute;right:0;bottom:-104px;display:grid;grid-template-columns:auto auto;border:1px solid var(--line-2);font-family:var(--mono);font-size:10.5px;color:var(--ink-3);background:var(--surface)}
+.titleblock div{padding:4px 9px;border-right:1px solid var(--line);border-bottom:1px solid var(--line)}
+.titleblock div:nth-child(2n){border-right:0;color:var(--ink)}
+.legend{position:sticky;left:16px;bottom:16px;display:inline-flex;flex-wrap:wrap;gap:6px 16px;align-items:center;margin:0 16px 16px;padding:8px 12px;border-radius:10px;background:var(--surface);border:1px solid var(--line);box-shadow:var(--shadow);font-size:12px;color:var(--ink-2);z-index:2}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend svg{width:26px;height:8px}
+.insp{border-left:1px solid var(--line);background:var(--pane);overflow:auto;padding:22px 20px;display:flex;flex-direction:column;gap:14px}
+.insp h3{margin:0;font-size:18px;line-height:1.25;letter-spacing:-.015em}
+.insp .lede{font-size:13.5px}
+.insp .modes{grid-template-columns:1fr 1fr}
+.insp .mb2{height:36px;font-size:13px}
+.insp .modes{flex:none}
+.insp .batch{flex:none;height:34px}
+.insp > .btn{align-self:flex-start}
+.insp .hintline{font-size:12px;color:var(--ink-3)}
+
+/* ---------------------------------------------------------------- plan */
+.view-plan{overflow:auto;display:none;background-color:var(--bg);background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);background-size:24px 24px}
+.app[data-view="plan"] .view-plan{display:block}
+.planin{max-width:1120px;margin:0 auto;padding:30px 28px 60px}
+.planhead{display:flex;align-items:flex-end;gap:20px;flex-wrap:wrap;margin-bottom:22px}
+.planhead h2{margin:0;font-size:26px;letter-spacing:-.02em;font-weight:600}
+.planhead p{margin:4px 0 0;color:var(--ink-2);font-size:14.5px}
+.tally{display:flex;gap:0;border:1px solid var(--line);border-radius:12px;background:var(--surface);overflow:hidden;box-shadow:var(--shadow)}
+.tally div{padding:10px 18px;border-right:1px solid var(--line);min-width:92px}
+.tally div:last-child{border-right:0}
+.tally b{display:block;font-size:22px;font-weight:600;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.tally span{font-size:11.5px;color:var(--ink-3)}
+.tally .t-p b{color:var(--teal-text)}
+.tally .t-w b{color:var(--verm)}
+.plangrid{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:22px;align-items:start}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);padding:18px 20px}
+.panel + .panel{margin-top:16px}
+.panel h3{display:flex;align-items:center;gap:8px;margin:0 0 12px;font-size:14px;font-weight:600}
+.panel h3 .c{font-family:var(--mono);font-size:12px;color:var(--ink-3);font-weight:400}
+.panel.attn{border-color:var(--verm-line)}
+.panel.attn h3 .i{color:var(--verm)}
+.lane{position:relative;padding-left:34px}
+.lane::before{content:"";position:absolute;left:11px;top:14px;bottom:14px;border-left:1.5px dashed var(--line-2)}
+.bstep{position:relative;padding:2px 0 18px}
+.bstep:last-child{padding-bottom:0}
+.bnum{position:absolute;left:-34px;top:0;width:24px;height:24px;border-radius:99px;display:grid;place-items:center;background:var(--teal);color:var(--teal-ink);font-family:var(--mono);font-size:11px;font-weight:600;box-shadow:0 0 0 4px var(--surface)}
+.bname{font-family:var(--mono);font-size:13.5px;font-weight:600;display:flex;flex-direction:column;gap:1px}
+.bname .after{font-family:var(--sans);font-weight:400;font-size:12px;color:var(--ink-3)}
+.bents{margin-top:6px;display:flex;flex-direction:column;gap:2px}
+.bent{display:grid;grid-template-columns:36px minmax(0,1fr) auto;gap:8px;align-items:baseline;padding:5px 8px;margin:0 -8px;border-radius:7px;text-align:left;font-size:13.5px}
+.bent:hover{background:var(--surface-2)}
+.bent .rid{font-size:11.5px}
+.bent .md{font-family:var(--mono);font-size:11px;color:var(--teal-text);display:flex;align-items:center;gap:4px}
+.bwarn{margin-top:6px;font-size:12px;color:var(--verm);display:flex;gap:6px;align-items:center}
+.ilist{display:flex;flex-direction:column;gap:2px}
+.iitem{display:grid;grid-template-columns:36px minmax(0,1fr);gap:8px;padding:6px 8px;margin:0 -8px;border-radius:7px;text-align:left;font-size:13.5px;line-height:1.45}
+.iitem:hover{background:var(--surface-2)}
+.iitem .sub{display:block;font-size:12px;color:var(--ink-3)}
+.pills{display:flex;flex-wrap:wrap;gap:5px}
+.pill{display:inline-flex;align-items:center;gap:6px;height:26px;padding:0 9px 0 7px;border-radius:7px;border:1px solid var(--line);background:var(--surface);font-size:12.5px;max-width:100%}
+.pill:hover{border-color:var(--line-2)}
+.pill .rid{font-size:11px}
+.pill .t{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.muted{color:var(--ink-3);font-size:13px;margin:0}
+.sendcta{display:flex;align-items:center;gap:14px;margin-top:22px;padding:16px 20px;border-radius:12px;background:var(--ink);color:var(--pane)}
+.sendcta p{margin:0;font-size:14px;flex:1}
+.sendcta p span{opacity:.7}
+.sendcta .btn.primary{height:38px;padding:0 16px}
+
+/* ---------------------------------------------------------------- layers: dialogs, menu, toast */
+.layer{position:fixed;inset:0;z-index:40;display:grid;place-items:center;background:var(--scrim);animation:fade .18s ease}
+.layer.menu{background:transparent;place-items:start end;padding:calc(var(--top) - 6px) 12px 0 0;animation:none}
+@keyframes fade{from{opacity:0}}
+.dialog{width:min(620px,calc(100vw - 32px));max-height:calc(100dvh - 40px);overflow:auto;background:var(--surface);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow-lg);animation:dlg .26s var(--ease)}
+@keyframes dlg{from{opacity:0;transform:translateY(10px) scale(.985)}}
+.dlgh{display:flex;align-items:flex-start;gap:12px;padding:22px 24px 6px}
+.dlgh h2{margin:0;font-size:20px;letter-spacing:-.015em;font-weight:600}
+.dlgh p{margin:4px 0 0;color:var(--ink-2);font-size:14px}
+.dlgh .ibtn{margin-left:auto;margin-top:-4px}
+.dlgb{padding:12px 24px 24px}
+.sumrow{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 14px}
+.sumrow span{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:99px;background:var(--surface-2);border:1px solid var(--line);font-size:12.5px}
+.sumrow span b{font-variant-numeric:tabular-nums}
+.callout{display:flex;gap:10px;padding:10px 12px;border-radius:10px;font-size:13px;margin-bottom:10px;background:var(--surface-2);border:1px solid var(--line);color:var(--ink-2)}
+.callout.w{background:var(--verm-soft);border-color:var(--verm-line);color:var(--ink)}
+.callout.w .i{color:var(--verm)}
+.bigsend{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;height:50px;border-radius:12px;background:var(--teal);color:var(--teal-ink);font-size:15.5px;font-weight:600;margin-top:6px;transition:filter .15s,transform .1s}
+.bigsend:hover{filter:brightness(1.07)}
+.bigsend:active{transform:translateY(1px)}
+.bigsend.done{background:var(--teal-soft);color:var(--teal-text);box-shadow:inset 0 0 0 1.5px var(--teal-line)}
+.steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:14px 0 4px;font-size:12.5px;color:var(--ink-2)}
+.steps div{display:flex;gap:8px;align-items:flex-start}
+.steps i{font-style:normal;font-family:var(--mono);font-size:11px;display:grid;place-items:center;width:20px;height:20px;border-radius:99px;flex:none;border:1px solid var(--line-2);color:var(--ink-3)}
+.steps .on i{background:var(--teal);border-color:var(--teal);color:var(--teal-ink)}
+.alt{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px;padding-top:14px;border-top:1px dashed var(--line-2);align-items:center}
+.alt .muted{flex-basis:100%;font-size:12px;margin-bottom:2px}
+details.peek{margin-top:12px}
+details.peek summary{cursor:pointer;font-size:12.5px;color:var(--ink-3)}
+details.peek pre{max-height:220px;overflow:auto;margin:8px 0 0;padding:10px 12px;border-radius:8px;background:var(--sunk);font-family:var(--mono);font-size:11.5px;line-height:1.5;white-space:pre-wrap}
+.menu .pop{width:270px;background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow-lg);padding:6px;animation:dlg .18s var(--ease)}
+.menu .pop button{display:flex;width:100%;align-items:center;gap:10px;padding:8px 10px;border-radius:7px;font-size:13.5px;text-align:left}
+.menu .pop button:hover{background:var(--surface-2)}
+.menu .pop button .sub{display:block;font-size:11.5px;color:var(--ink-3)}
+.menu .pop hr{border:0;border-top:1px solid var(--line);margin:6px 4px}
+.menu .pop .danger{color:var(--verm)}
+.menu .info{padding:8px 10px;font-family:var(--mono);font-size:11px;color:var(--ink-3);line-height:1.7}
+.menu .info b{color:var(--ink-2);font-weight:500}
+.keys{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px 28px}
+.keys h4{grid-column:1/-1;margin:12px 0 4px;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3)}
+.keys div{display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:13.5px;padding:4px 0;border-bottom:1px dashed var(--line)}
+.keys kbd{margin-left:3px}
+.toast{position:fixed;left:50%;bottom:118px;transform:translateX(-50%);z-index:50;display:flex;align-items:center;gap:14px;padding:9px 10px 9px 16px;border-radius:12px;background:var(--ink);color:var(--pane);box-shadow:var(--shadow-lg);font-size:13.5px;animation:toast .28s var(--ease);max-width:calc(100vw - 32px)}
+.toast button{color:var(--teal);font-weight:600;padding:3px 8px;border-radius:6px}
+:root[data-theme="dark"] .toast button{color:var(--teal-ink)}
+.toast button:hover{background:color-mix(in srgb,var(--pane) 12%,transparent)}
+@keyframes toast{from{opacity:0;transform:translate(-50%,10px)}}
+.confetti{position:fixed;inset:0;pointer-events:none;z-index:60}
+
+/* ---------------------------------------------------------------- responsive */
+@media (max-width:1280px){ .saved .lbl{display:none} }
+@media (max-width:1180px){ .refs .ref.base, .refs .arrow{display:none} }
+@media (max-width:1000px){ .refs{display:none} .view-map{grid-template-columns:minmax(0,1fr)} .insp{display:none} .two{grid-template-columns:1fr} .plangrid{grid-template-columns:1fr} }
+@media (max-width:760px){
+  .toast{bottom:150px}
+  :root{--top:auto}
+  .top{flex-wrap:wrap;padding:10px 12px;gap:10px 12px}
+  .top .views{order:5;flex:1 1 100%;justify-content:stretch}
+  .top .views button{flex:1;justify-content:center}
+  .progress{order:1}
+  .segs{display:none}
+  .grow{order:2}
+  .top .ibtn,.send{order:3}
+  .kicker .kpos-long{display:none}
+  .dockl .dl-t .blurb{display:none}
+  .saved,.hide-sm{display:none}
+  .send .lbl{display:none}
+  .view-review{grid-template-columns:1fr}
+  .dpane{position:absolute;inset:0;z-index:3;transform:translateX(100%);transition:transform .28s var(--ease);visibility:hidden}
+  .app.mdetail .dpane{transform:none;visibility:visible}
+  .back{display:inline-flex}
+  .dscroll{padding:14px 10px 24px}
+  .sheet{padding:20px 18px 24px}
+  .regm{display:none}
+  h2.title{font-size:22px}
+  .dock{padding:8px 10px 10px}
+  .dockl{flex-wrap:wrap}
+  .dockl .dl-t{flex:1}
+  .batch{flex:1 1 100%}
+  .mb2{justify-content:center;padding:0 6px;font-size:12.5px;height:44px}
+  .mb2 kbd{display:none}
+  .mb2 svg{display:none}
+  .planin{padding:18px 12px 40px}
+  .tally div{min-width:0;padding:8px 12px}
+  .steps{grid-template-columns:1fr}
+}
+@media (prefers-reduced-motion: reduce){ *,*::before,*::after{animation:none!important;transition:none!important} }
+</style>
+</head>
+<body>
+<div class="app" id="app" data-view="review">
+  <header class="top">
+    <div class="brand" aria-label="harvest">
+      <svg class="i reg" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="4.2"/><path d="M8 1v4M8 11v4M1 8h4M11 8h4"/></svg>
+      <span class="word">harvest</span>
+    </div>
+    <div class="refs" id="refs"></div>
+    <nav class="views" role="tablist" aria-label="Views">
+      <button role="tab" data-act="view" data-v="review" aria-selected="true">Review</button>
+      <button role="tab" data-act="view" data-v="map" aria-selected="false">Map</button>
+      <button role="tab" data-act="view" data-v="plan" aria-selected="false">Plan <span class="n" id="plan-n"></span></button>
+    </nav>
+    <div class="grow"></div>
+    <div class="progress" id="progress"></div>
+    <div class="saved" id="saved"></div>
+    <button class="ibtn hide-sm" data-act="help" title="Keyboard shortcuts (?)" aria-label="Keyboard shortcuts"><svg class="i" viewBox="0 0 16 16"><rect x="1.5" y="4" width="13" height="8.5" rx="1.5"/><path d="M4 6.5h.01M6.5 6.5h.01M9 6.5h.01M11.5 6.5h.01M5 10h6"/></svg></button>
+    <button class="ibtn" data-act="menu" title="More" aria-label="More options" aria-haspopup="menu"><svg class="i" viewBox="0 0 16 16"><path d="M3.5 8h.01M8 8h.01M12.5 8h.01" stroke-width="2.6"/></svg></button>
+    <button class="btn primary send" id="sendbtn" data-act="send" title="Send this round to Claude (S)"><svg class="i" viewBox="0 0 16 16"><path d="M14 2 7 9M14 2l-4.5 12L7 9 2 6.5z"/></svg><span class="lbl">Send to Claude</span></button>
+  </header>
+  <div class="notices" id="notices"></div>
+  <main>
+    <section class="view view-review" aria-label="Review">
+      <aside class="lpane" aria-label="Entries">
+        <div class="lhead">
+          <label class="search"><svg class="i" viewBox="0 0 16 16"><circle cx="7" cy="7" r="4.5"/><path d="m10.5 10.5 3.5 3.5"/></svg>
+            <input id="q" type="search" placeholder="Filter by id, title or text" autocomplete="off" aria-label="Filter entries"><kbd>/</kbd></label>
+          <div class="filters" id="filters" role="group" aria-label="Show"></div>
+        </div>
+        <div id="roundnote"></div>
+        <div class="list" id="list" role="listbox" aria-label="Entries in dependency order" tabindex="0"></div>
+      </aside>
+      <section class="dpane" id="dpane" aria-label="Entry">
+        <div class="dscroll" id="dscroll"></div>
+        <div class="dock" id="dock" aria-label="Decision"></div>
+      </section>
+    </section>
+    <section class="view view-map" aria-label="Dependency map">
+      <div class="mapwrap" id="mapwrap"><div class="canvas" id="canvas"></div><div class="legend" id="legend"></div></div>
+      <aside class="insp" id="insp" aria-label="Selected entry"></aside>
+    </section>
+    <section class="view view-plan" aria-label="Plan"><div class="planin" id="plan"></div></section>
+  </main>
+</div>
+<div id="layer"></div>
+<div id="toastbox" aria-live="polite"></div>
+<input type="file" id="importfile" accept=".json,application/json" hidden>
+<datalist id="batchlist"></datalist>
+
+<script id="harvest-data" type="application/json">{"meta": {"title": "Harvest ledger: origin/main → upstream/main", "base": "upstream/main", "base_sha": "4be19e2", "head": "origin/main", "head_sha": "8c1d2e0", "merge_base": "3f2a91c", "updated": "2026-10-02 16:40", "header": {"base": "upstream/main @ 4be19e2", "head": "origin/main @ 8c1d2e0", "merge-base": "3f2a91c", "updated": "2026-10-02 16:40", "content-free merges": "71d0c5a (merge of origin/dev, no content), e92b4f1 (merge of upstream/main into origin/main)", "not in range": "5aa3c10 (upstream merge \"rate limiter rebuild\", brought fork-authored work in below the merge-base)", "read in full": "src/pantry/**, daemon/**", "attributed only": "tests/**, docs/**, deploy/**, uv.lock"}, "ledger_name": "origin-main.md", "ledger_sha256": "96e8f5957bb6e0b8bfb6e3edce748a343923a293b117c772388d6ff17a38f777", "round": 1, "ingested_round": 0, "generated": "2026-10-09T05:31:44Z", "parse_warnings": []}, "pending": {}, "entries": [{"id": "F1", "title": "Structured JSON logging with request ids", "kind": "feature", "description": "Every log line is emitted as one JSON object carrying the job id and a per-request id, instead of free-form text.", "why": "\"grep-able logs for the on-call rotation\" (commit 7ab1c22).", "size": "+180 / -41 across 5 files", "commits": "7ab1c22, 0de4f19", "files": "5 (1 shared). Source: src/pantry/log.py (new), src/pantry/worker.py (shared with F4)", "depends_raw": "none", "depends": [], "fit_raw": "aligned. CONTRIBUTING.md:31 asks for \"machine-readable logs where practical\".", "fit": "aligned", "status_raw": "landed: harvest/structured-json-logging", "status": {"kind": "landed", "branch": "harvest/structured-json-logging", "on_base": false}, "notes": [], "notes_inline": "", "raw": "### F1. Structured JSON logging with request ids\n\nEvery log line is emitted as one JSON object carrying the job id and a per-request id, instead of free-form text.\nWhy: \"grep-able logs for the on-call rotation\" (commit 7ab1c22).\n\n- Size: +180 / -41 across 5 files\n- Commits: 7ab1c22, 0de4f19\n- Files: 5 (1 shared). Source: src/pantry/log.py (new), src/pantry/worker.py (shared with F4)\n- Depends on: none\n- Fit: aligned. CONTRIBUTING.md:31 asks for \"machine-readable logs where practical\".\n- Status: landed: harvest/structured-json-logging", "order": 0}, {"id": "F2", "title": "Layered TOML config loader", "kind": "feature", "description": "Config is read from /etc, then the user directory, then the working directory, each layer overriding the last.", "why": "\"ops wanted per-host overrides without editing the shipped file\" (commit 3c9d8e0).", "size": "+210 / -66 across 4 files", "commits": "3c9d8e0, b4417ad", "files": "4 (2 shared). Source: src/pantry/config.py (shared with F14, F16), src/pantry/cli.py", "depends_raw": "none", "depends": [], "fit_raw": "aligned. README.md:58 lists \"files in /etc\" as supported config; layering is a small extension.", "fit": "aligned", "status_raw": "open", "status": {"kind": "open"}, "notes": [], "notes_inline": "", "raw": "### F2. Layered TOML config loader\n\nConfig is read from /etc, then the user directory, then the working directory, each layer overriding the last.\nWhy: \"ops wanted per-host overrides without editing the shipped file\" (commit 3c9d8e0).\n\n- Size: +210 / -66 across 4 files\n- Commits: 3c9d8e0, b4417ad\n- Files: 4 (2 shared). Source: src/pantry/config.py (shared with F14, F16), src/pantry/cli.py\n- Depends on: none\n- Fit: aligned. README.md:58 lists \"files in /etc\" as supported config; layering is a small extension.\n- Status: open", "order": 1}, {"id": "F3", "title": "Persist job records in SQLite", "kind": "feature", "description": "Job state survives a daemon restart because it is stored in a SQLite file instead of an in-memory dict.", "why": "\"jobs were lost on every deploy\" (commit 91fe0b3).", "size": "+520 / -88 across 9 files", "commits": "91fe0b3, a77c4de, 2d0e8b9", "files": "9 (3 shared). Source: src/pantry/store.py (new), src/pantry/queue.py (shared with F6, F13), src/pantry/models.py", "depends_raw": "F2 (reads the database path from the layered config)", "depends": ["F2"], "fit_raw": "tension. ADR-002 says \"job state is in memory; durability is the caller's problem\".", "fit": "tension", "status_raw": "open", "status": {"kind": "open"}, "notes": [], "notes_inline": "", "raw": "### F3. Persist job records in SQLite\n\nJob state survives a daemon restart because it is stored in a SQLite file instead of an in-memory dict.\nWhy: \"jobs were lost on every deploy\" (commit 91fe0b3).\n\n- Size: +520 / -88 across 9 files\n- Commits: 91fe0b3, a77c4de, 2d0e8b9\n- Files: 9 (3 shared). Source: src/pantry/store.py (new), src/pantry/queue.py (shared with F6, F13), src/pantry/models.py\n- Depends on: F2 (reads the database path from the layered config)\n- Fit: tension. ADR-002 says \"job state is in memory; durability is the caller's problem\".\n- Status: open", "order": 2}, {"id": "F4", "title": "Retry failed jobs with exponential backoff", "kind": "feature", "description": "Jobs that fail are retried up to five times with growing delays, instead of being dropped.", "why": "\"flaky downstreams drop work silently\" (commit c3a90e5).", "size": "+240 / -12 across 6 files", "commits": "c3a90e5, e4f5a6b (partial: src/pantry/queue.py)", "files": "6 (2 shared). Source: src/pantry/retry.py (new), src/pantry/queue.py (shared with F3)", "depends_raw": "F3 (attempt counts live in the job table), F1 (adds `_retry_delay` to F1's log context)", "depends": ["F3", "F1"], "fit_raw": "tension. Adds a background timer thread; ADR-004 says the worker is single-threaded.", "fit": "tension", "status_raw": "open", "status": {"kind": "open"}, "notes": [{"date": "2026-10-02", "kind": "question", "round": null, "qid": null, "text": "Does the retry timer really need its own thread?", "answer": "It only runs the backoff sleep (retry.py:40-88). Base's worker already has a scheduled-job queue (worker/jobs.py:12), so a retry could re-enqueue itself with a delay and ADR-004 stays intact."}], "notes_inline": "", "raw": "### F4. Retry failed jobs with exponential backoff\n\nJobs that fail are retried up to five times with growing delays, instead of being dropped.\nWhy: \"flaky downstreams drop work silently\" (commit c3a90e5).\n\n- Size: +240 / -12 across 6 files\n- Commits: c3a90e5, e4f5a6b (partial: src/pantry/queue.py)\n- Files: 6 (2 shared). Source: src/pantry/retry.py (new), src/pantry/queue.py (shared with F3)\n- Depends on: F3 (attempt counts live in the job table), F1 (adds `_retry_delay` to F1's log context)\n- Fit: tension. Adds a background timer thread; ADR-004 says the worker is single-threaded.\n- Status: open\n- Notes:\n  - 2026-10-02 Q: Does the retry timer really need its own thread? A: It only runs the backoff sleep (retry.py:40-88). Base's worker already has a scheduled-job queue (worker/jobs.py:12), so a retry could re-enqueue itself with a delay and ADR-004 stays intact.", "order": 3}, {"id": "F5", "title": "Dead-letter queue for exhausted retries", "kind": "feature", "description": "Jobs that use up their retries are parked in a dead-letter table where an operator can inspect and replay them.", "why": "\"we kept losing the jobs that mattered most\" (commit 5f1be27).", "size": "+160 / -4 across 3 files", "commits": "5f1be27", "files": "3 (1 shared). Source: src/pantry/deadletter.py (new), src/pantry/retry.py (shared with F4)", "depends_raw": "F4 (hooks the retry-exhausted event), F3 (dead letters are rows in the job table)", "depends": ["F4", "F3"], "fit_raw": "aligned. docs/design.md:44 already names a \"dead letter\" as a future concept.", "fit": "aligned", "status_raw": "open", "status": {"kind": "open"}, "notes": [], "notes_inline": "", "raw": "### F5. Dead-letter queue for exhausted retries\n\nJobs that use up their retries are parked in a dead-letter table where an operator can inspect and replay them.\nWhy: \"we kept losing the jobs that mattered most\" (commit 5f1be27).\n\n- Size: +160 / -4 across 3 files\n- Commits: 5f1be27\n- Files: 3 (1 shared). Source: src/pantry/deadletter.py (new), src/pantry/retry.py (shared with F4)\n- Depends on: F4 (hooks the retry-exhausted event), F3 (dead letters are rows in the job table)\n- Fit: aligned. docs/design.md:44 already names a \"dead letter\" as a future concept.\n- Status: open", "order": 4}, {"id": "F6", "title": "Priority lanes (high, normal, low)", "kind": "feature", "description": "Jobs carry a priority and workers drain high before normal before low, instead of strict arrival order.", "why": "\"billing jobs queued behind a 40,000-row export\" (commit 08ac6d1).", "size": "+130 / -30 across 4 files", "commits": "08ac6d1, 1b7e33f", "files": "4 (1 shared). Source: src/pantry/queue.py (shared with F3), src/pantry/priority.py (new)", "depends_raw": "F3 (priority is a column on the job row)", "depends": ["F3"], "fit_raw": "aligned. README.md:72 lists \"ordering\" as an extension point.", "fit": "aligned", "status_raw": "open", "status": {"kind": "open"}, "notes": [], "notes_inline": "", "raw": "### F6. Priority lanes (high, normal, low)\n\nJobs carry a priority and workers drain high before normal before low, instead of strict arrival order.\nWhy: \"billing jobs queued behind a 40,000-row export\" (commit 08ac6d1).\n\n- Size: +130 / -30 across 4 files\n- Commits: 08ac6d1, 1b7e33f\n- Files: 4 (1 shared). Source: src/pantry/queue.py (shared with F3), src/pantry/priority.py (new)\n- Depends on: F3 (priority is a column on the job row)\n- Fit: aligned. README.md:72 lists \"ordering\" as an extension point.\n- Status: open", "order": 5}, {"id": "F7", "title": "Per-queue concurrency limits", "kind": "feature", "description": "Each named queue can cap how many of its jobs run at once, instead of one global worker count.", "why": "\"one noisy queue starves the rest\" (commit d19e840).", "size": "+95 / -22 across 3 files", "commits": "d19e840", "files": "3 (2 shared). Source: src/pantry/worker.py (shared with F1, F8), src/pantry/config.py (shared with F2)", "depends_raw": "F2 (limits are configured per queue), F6 (limits apply per lane)", "depends": ["F2", "F6"], "fit_raw": "tension. ADR-004's single-threaded worker has no notion of concurrent jobs; this assumes a thread pool.", "fit": "tension", "status_raw": "open", "status": {"kind": "open"}, "notes": [], "notes_inline": "", "raw": "### F7. Per-queue concurrency limits\n\nEach named queue can cap how many of its jobs run at once, instead of one global worker count.\nWhy: \"one noisy queue starves the rest\" (commit d19e840).\n\n- Size: +95 / -22 across 3 files\n- Commits: d19e840\n- Files: 3 (2 shared). Source: src/pantry/worker.py (shared with F1, F8), src/pantry/config.py (shared with F2)\n- Depends on: F2 (limits are configured per queue), F6 (limits apply per lane)\n- Fit: tension. ADR-004's single-threaded worker has no notion of concurrent jobs; this assumes a thread pool.\n- Status: open", "order": 6}, {"id": "F8", "title": "Graceful shutdown drains in-flight jobs", "kind": "feature", "description": "On SIGTERM the daemon stops taking new jobs and waits for running ones to finish, up to a configurable grace period.", "why": "\"deploys killed jobs halfway through\" (commit 6e2d415).", "size": "+85 / -9 across 3 files", "commits": "6e2d415", "files": "3 (1 shared). Source: src/pantry/shutdown.py (new), src/pantry/worker.py (shared with F1, F7)", "depends_raw": "none", "depends": [], "fit_raw": "aligned. CONTRIBUTING.md:19 asks that long-running processes handle SIGTERM.", "fit": "aligned", "status_raw": "picked: cherry-pick, batch: shutdown", "status": {"kind": "picked", "mode": "cherry-pick", "batch": "shutdown"}, "notes": [], "notes_inline": "", "raw": "### F8. Graceful shutdown drains in-flight jobs\n\nOn SIGTERM the daemon stops taking new jobs and waits for running ones to finish, up to a configurable grace period.\nWhy: \"deploys killed jobs halfway through\" (commit 6e2d415).\n\n- Size: +85 / -9 across 3 files\n- Commits: 6e2d415\n- Files: 3 (1 shared). Source: src/pantry/shutdown.py (new), src/pantry/worker.py (shared with F1, F7)\n- Depends on: none\n- Fit: aligned. CONTRIBUTING.md:19 asks that long-running processes handle SIGTERM.\n- Status: picked: cherry-pick, batch: shutdown", "order": 7}, {"id": "F9", "title": "Health endpoint", "kind": "feature", "description": "`GET /healthz` returns 200 while the worker loop is alive and 503 once it stalls, for load balancers and orchestrators.", "why": "\"the orchestrator could not tell a stuck daemon from a busy one\" (commit f0a1c93).", "size": "+70 / -0 across 2 files", "commits": "f0a1c93", "files": "2 (0 shared). Source: src/pantry/health.py (new), src/pantry/http.py", "depends_raw": "F1 (uses the request-id middleware)", "depends": ["F1"], "fit_raw": "aligned. README.md:90 says \"a health check is welcome\".", "fit": "aligned", "status_raw": "open", "status": {"kind": "open"}, "notes": [], "notes_inline": "", "raw": "### F9. Health endpoint\n\n`GET /healthz` returns 200 while the worker loop is alive and 503 once it stalls, for load balancers and orchestrators.\nWhy: \"the orchestrator could not tell a stuck daemon from a busy one\" (commit f0a1c93).\n\n- Size: +70 / -0 across 2 files\n- Commits: f0a1c93\n- Files: 2 (0 shared). Source: src/pantry/health.py (new), src/pantry/http.py\n- Depends on: F1 (uses the request-id middleware)\n- Fit: aligned. README.md:90 says \"a health check is welcome\".\n- Status: open", "order": 8}, {"id": "F10", "title": "Prometheus metrics endpoint", "kind": "feature", "description": "`GET /metrics` exposes queue depth, job durations and failure counts in Prometheus text format.", "why": "unstated.", "size": "+190 / -6 across 4 files", "commits": "44cd02e, 9be5f71", "files": "4 (1 shared). Source: src/pantry/metrics.py (new), src/pantry/http.py (shared with F9)", "depends_raw": "F9 (registers on the same HTTP server), F1", "depends": ["F9", "F1"], "fit_raw": "tension. CONTRIBUTING.md:44 says new runtime dependencies need an ADR; this adds `prometheus-client`.", "fit": "tension", "status_raw": "open", "status": {"kind": "open"}, "notes": [], "notes_inline": "", "raw": "### F10. Prometheus metrics endpoint\n\n`GET /metrics` exposes queue depth, job durations and failure counts in Prometheus text format.\nWhy: unstated.\n\n- Size: +190 / -6 across 4 files\n- Commits: 44cd02e, 9be5f71\n- Files: 4 (1 shared). Source: src/pantry/metrics.py (new), src/pantry/http.py (shared with F9)\n- Depends on: F9 (registers on the same HTTP server), F1\n- Fit: tension. CONTRIBUTING.md:44 says new runtime dependencies need an ADR; this adds `prometheus-client`.\n- Status: open", "order": 9}, {"id": "F11", "title": "Admin CLI for jobs", "kind": "feature", "description": "`pantryctl jobs list|show|retry|cancel` lets an operator inspect and act on jobs from a shell.", "why": "\"we were running SQL by hand\" (commit b82f6a4).", "size": "+310 / -0 across 5 files", "commits": "b82f6a4, 73e9d0c", "files": "5 (1 shared). Source: src/pantryctl/ (new), src/pantry/cli.py (shared with F2)", "depends_raw": "F3 (reads the job table), F5 (the `retry` subcommand replays dead letters)", "depends": ["F3", "F5"], "fit_raw": "aligned. docs/design.md:61 sketches a control CLI.", "fit": "aligned", "status_raw": "open", "status": {"kind": "open"}, "notes": [], "notes_inline": "", "raw": "### F11. Admin CLI for jobs\n\n`pantryctl jobs list|show|retry|cancel` lets an operator inspect and act on jobs from a shell.\nWhy: \"we were running SQL by hand\" (commit b82f6a4).\n\n- Size: +310 / -0 across 5 files\n- Commits: b82f6a4, 73e9d0c\n- Files: 5 (1 shared). Source: src/pantryctl/ (new), src/pantry/cli.py (shared with F2)\n- Depends on: F3 (reads the job table), F5 (the `retry` subcommand replays dead letters)\n- Fit: aligned. docs/design.md:61 sketches a control CLI.\n- Status: open", "order": 10}, {"id": "F12", "title": "Web admin UI", "kind": "feature", "description": "A small single-page web app lists queues and jobs, with buttons to retry and cancel, served from the daemon itself.", "why": "\"the CLI is not for the support team\" (commit e61f3b8).", "size": "+1,420 / -0 across 22 files", "commits": "e61f3b8, 02d7aa4, c5b9e61", "files": "22 (1 shared). Source: web/ (new), src/pantry/http.py (shared with F9, F10)", "depends_raw": "F11 (calls the same actions), F10 (draws charts from /metrics)", "depends": ["F11", "F10"], "fit_raw": "conflict. README.md:12 states \"no web UI; the daemon is headless by design\".", "fit": "conflict", "status_raw": "open", "status": {"kind": "open"}, "notes": [], "notes_inline": "", "raw": "### F12. Web admin UI\n\nA small single-page web app lists queues and jobs, with buttons to retry and cancel, served from the daemon itself.\nWhy: \"the CLI is not for the support team\" (commit e61f3b8).\n\n- Size: +1,420 / -0 across 22 files\n- Commits: e61f3b8, 02d7aa4, c5b9e61\n- Files: 22 (1 shared). Source: web/ (new), src/pantry/http.py (shared with F9, F10)\n- Depends on: F11 (calls the same actions), F10 (draws charts from /metrics)\n- Fit: conflict. README.md:12 states \"no web UI; the daemon is headless by design\".\n- Status: open", "order": 11}, {"id": "F13", "title": "Scheduled (cron-style) jobs", "kind": "feature", "description": "A job can be registered with a cron expression and the daemon enqueues it on schedule, instead of relying on an external cron.", "why": "\"cron on three hosts fired the same job three times\" (commit 1ae48d7).", "size": "+260 / -14 across 5 files", "commits": "1ae48d7, 8d03fb6", "files": "5 (2 shared). Source: src/pantry/schedule.py (new), src/pantry/queue.py (shared with F3, F6)", "depends_raw": "F3 (schedule state is persisted), F6 (scheduled jobs pick a lane)", "depends": ["F3", "F6"], "fit_raw": "tension. ADR-005 says \"scheduling is the caller's job\".", "fit": "tension", "status_raw": "open", "status": {"kind": "open"}, "notes": [], "notes_inline": "", "raw": "### F13. Scheduled (cron-style) jobs\n\nA job can be registered with a cron expression and the daemon enqueues it on schedule, instead of relying on an external cron.\nWhy: \"cron on three hosts fired the same job three times\" (commit 1ae48d7).\n\n- Size: +260 / -14 across 5 files\n- Commits: 1ae48d7, 8d03fb6\n- Files: 5 (2 shared). Source: src/pantry/schedule.py (new), src/pantry/queue.py (shared with F3, F6)\n- Depends on: F3 (schedule state is persisted), F6 (scheduled jobs pick a lane)\n- Fit: tension. ADR-005 says \"scheduling is the caller's job\".\n- Status: open", "order": 12}, {"id": "F14", "title": "Signed job payloads (HMAC)", "kind": "feature", "description": "Payloads are signed when enqueued and verified before running, so a tampered row is rejected.", "why": "\"the queue file is world-readable on shared hosts\" (commit a2e07c8).", "size": "+120 / -3 across 3 files", "commits": "a2e07c8", "files": "3 (1 shared). Source: src/pantry/signing.py (new), src/pantry/config.py (shared with F2)", "depends_raw": "F2 (the signing key comes from config)", "depends": ["F2"], "fit_raw": "aligned. CONTRIBUTING.md:52 asks for integrity checks on persisted data.", "fit": "aligned", "status_raw": "left", "status": {"kind": "left"}, "notes": [], "notes_inline": "", "raw": "### F14. Signed job payloads (HMAC)\n\nPayloads are signed when enqueued and verified before running, so a tampered row is rejected.\nWhy: \"the queue file is world-readable on shared hosts\" (commit a2e07c8).\n\n- Size: +120 / -3 across 3 files\n- Commits: a2e07c8\n- Files: 3 (1 shared). Source: src/pantry/signing.py (new), src/pantry/config.py (shared with F2)\n- Depends on: F2 (the signing key comes from config)\n- Fit: aligned. CONTRIBUTING.md:52 asks for integrity checks on persisted data.\n- Status: left", "order": 13}, {"id": "F15", "title": "Job timeouts with cancellation", "kind": "feature", "description": "A job that runs past its timeout is cancelled cooperatively, and killed if it ignores the cancellation.", "why": "\"a hung job held a worker slot for nine days\" (commit 37b5d1e).", "size": "+175 / -20 across 4 files", "commits": "37b5d1e, c0f9a42", "files": "4 (2 shared). Source: src/pantry/timeout.py (new), src/pantry/worker.py (shared with F1, F7, F8)", "depends_raw": "F8 (reuses the drain/cancel path), F4 (a timeout counts as a failed attempt)", "depends": ["F8", "F4"], "fit_raw": "tension. Cooperative cancellation needs a second thread; ADR-004.", "fit": "tension", "status_raw": "open", "status": {"kind": "open"}, "notes": [], "notes_inline": "", "raw": "### F15. Job timeouts with cancellation\n\nA job that runs past its timeout is cancelled cooperatively, and killed if it ignores the cancellation.\nWhy: \"a hung job held a worker slot for nine days\" (commit 37b5d1e).\n\n- Size: +175 / -20 across 4 files\n- Commits: 37b5d1e, c0f9a42\n- Files: 4 (2 shared). Source: src/pantry/timeout.py (new), src/pantry/worker.py (shared with F1, F7, F8)\n- Depends on: F8 (reuses the drain/cancel path), F4 (a timeout counts as a failed attempt)\n- Fit: tension. Cooperative cancellation needs a second thread; ADR-004.\n- Status: open", "order": 14}, {"id": "F16", "title": "Webhook notification when a job dead-letters", "kind": "feature", "description": "An operator-configured URL receives a POST with the job summary when a job lands in the dead-letter table.", "why": "\"we found dead jobs a week late\" (commit 9d44e6b).", "size": "+110 / -0 across 3 files", "commits": "9d44e6b", "files": "3 (1 shared). Source: src/pantry/notify.py (new), src/pantry/config.py (shared with F2)", "depends_raw": "F5 (fires on the dead-letter event), F2 (URL from config), F1 (line to edit: log context in `notify._post`)", "depends": ["F5", "F2", "F1"], "fit_raw": "aligned. README.md:95 mentions \"outgoing hooks\" as welcome.", "fit": "aligned", "status_raw": "open", "status": {"kind": "open"}, "notes": [{"date": "2026-10-02", "kind": "note", "round": null, "qid": null, "text": "A shared secret for the webhook is stored in plain config; check whether F14's signing key can be reused."}], "notes_inline": "", "raw": "### F16. Webhook notification when a job dead-letters\n\nAn operator-configured URL receives a POST with the job summary when a job lands in the dead-letter table.\nWhy: \"we found dead jobs a week late\" (commit 9d44e6b).\n\n- Size: +110 / -0 across 3 files\n- Commits: 9d44e6b\n- Files: 3 (1 shared). Source: src/pantry/notify.py (new), src/pantry/config.py (shared with F2)\n- Depends on: F5 (fires on the dead-letter event), F2 (URL from config), F1 (line to edit: log context in `notify._post`)\n- Fit: aligned. README.md:95 mentions \"outgoing hooks\" as welcome.\n- Status: open\n- Notes:\n  - 2026-10-02 Note: A shared secret for the webhook is stored in plain config; check whether F14's signing key can be reused.", "order": 15}, {"id": "F17", "title": "Multi-tenant namespaces", "kind": "feature", "description": "Queues, jobs and config can be scoped to a tenant name, and tenants cannot see each other's jobs.", "why": "\"we host three customers on one daemon\" (commit 55e1d0b).", "size": "+640 / -210 across 14 files", "commits": "55e1d0b, 61c8fa2, d7a03e9", "files": "14 (6 shared). Source: src/pantry/tenancy.py (new), src/pantry/store.py (shared with F3), src/pantry/config.py (shared with F2)", "depends_raw": "F3, F2, F7 (per-tenant concurrency)", "depends": ["F3", "F2", "F7"], "fit_raw": "conflict. README.md:12 and ADR-001 describe a single-tenant daemon; every public function would change.", "fit": "conflict", "status_raw": "open", "status": {"kind": "open"}, "notes": [], "notes_inline": "", "raw": "### F17. Multi-tenant namespaces\n\nQueues, jobs and config can be scoped to a tenant name, and tenants cannot see each other's jobs.\nWhy: \"we host three customers on one daemon\" (commit 55e1d0b).\n\n- Size: +640 / -210 across 14 files\n- Commits: 55e1d0b, 61c8fa2, d7a03e9\n- Files: 14 (6 shared). Source: src/pantry/tenancy.py (new), src/pantry/store.py (shared with F3), src/pantry/config.py (shared with F2)\n- Depends on: F3, F2, F7 (per-tenant concurrency)\n- Fit: conflict. README.md:12 and ADR-001 describe a single-tenant daemon; every public function would change.\n- Status: open", "order": 16}, {"id": "Plumbing", "title": "Dependency bumps, CI cache, renames", "kind": "plumbing", "description": "Formatting, lockfile updates, the CI cache key and a package rename, with no user-facing intent.", "why": "unstated.", "size": "+310 / -290 across 18 files", "commits": "1f0c2b7, 8a6d9e4, c71e0b3", "files": "18 (0 shared). Source: pyproject.toml, uv.lock, .github/workflows/ci.yml", "depends_raw": "none", "depends": [], "fit_raw": "aligned. Nothing here touches behaviour.", "fit": "aligned", "status_raw": "open", "status": {"kind": "open"}, "notes": [], "notes_inline": "", "raw": "### Plumbing. Dependency bumps, CI cache, renames\n\nFormatting, lockfile updates, the CI cache key and a package rename, with no user-facing intent.\nWhy: unstated.\n\n- Size: +310 / -290 across 18 files\n- Commits: 1f0c2b7, 8a6d9e4, c71e0b3\n- Files: 18 (0 shared). Source: pyproject.toml, uv.lock, .github/workflows/ci.yml\n- Depends on: none\n- Fit: aligned. Nothing here touches behaviour.\n- Status: open", "order": 17}, {"id": "Head-only", "title": "Fork docs, deployment config, persona", "kind": "headonly", "description": "The fork's own README banner, Kubernetes manifests and deploy scripts.", "why": "unstated.", "size": "+480 / -12 across 17 files", "commits": "2b9e7a0, f44d1c6", "files": "17 (0 shared). Source: deploy/**, FORK.md, README.md (banner only)", "depends_raw": "none", "depends": [], "fit_raw": "conflict. FORK.md:7 keeps deployment config off upstream.", "fit": "conflict", "status_raw": "open", "status": {"kind": "open"}, "notes": [], "notes_inline": "", "raw": "### Head-only. Fork docs, deployment config, persona\n\nThe fork's own README banner, Kubernetes manifests and deploy scripts.\nWhy: unstated.\n\n- Size: +480 / -12 across 17 files\n- Commits: 2b9e7a0, f44d1c6\n- Files: 17 (0 shared). Source: deploy/**, FORK.md, README.md (banner only)\n- Depends on: none\n- Fit: conflict. FORK.md:7 keeps deployment config off upstream.\n- Status: open", "order": 18}, {"id": "S1", "title": "Token-bucket rate limiter (rebuilt on upstream, merged back)", "kind": "setaside", "description": "The rate limiter the fork wrote was rebuilt onto upstream last month and merged back, so the fork's original commits show in the log.", "why": "\"limit abusive enqueuers\" (commit 4d8e2c1).", "size": "+140 / -0 across 3 files", "commits": "4d8e2c1, 90b3ae7", "files": "3 (0 shared). Source: src/pantry/ratelimit.py", "depends_raw": "none", "depends": [], "fit_raw": "aligned. Already on base.", "fit": "aligned", "status_raw": "landed: already on base", "status": {"kind": "landed", "branch": "already on base", "on_base": true}, "notes": [{"kind": "plain", "text": "Evidence: upstream/main src/pantry/ratelimit.py has the same bucket logic (merge 5aa3c10); pass 3."}], "notes_inline": "", "raw": "### S1. Token-bucket rate limiter (rebuilt on upstream, merged back)\n\nThe rate limiter the fork wrote was rebuilt onto upstream last month and merged back, so the fork's original commits show in the log.\nWhy: \"limit abusive enqueuers\" (commit 4d8e2c1).\n\n- Size: +140 / -0 across 3 files\n- Commits: 4d8e2c1, 90b3ae7\n- Files: 3 (0 shared). Source: src/pantry/ratelimit.py\n- Depends on: none\n- Fit: aligned. Already on base.\n- Status: landed: already on base\n- Notes:\n  - Evidence: upstream/main src/pantry/ratelimit.py has the same bucket logic (merge 5aa3c10); pass 3.", "order": 19}, {"id": "S2", "title": "`--version` flag", "kind": "setaside", "description": "`pantry --version` prints the package version.", "why": "unstated.", "size": "+12 / -0 across 1 file", "commits": "6c1d0fa", "files": "1 (0 shared). Source: src/pantry/cli.py", "depends_raw": "none", "depends": [], "fit_raw": "aligned. Already on base.", "fit": "aligned", "status_raw": "landed: already on base", "status": {"kind": "landed", "branch": "already on base", "on_base": true}, "notes": [{"kind": "plain", "text": "Evidence: patch-equivalent commit on base (pass 1, `git log --cherry-pick`)."}], "notes_inline": "", "raw": "### S2. `--version` flag\n\n`pantry --version` prints the package version.\nWhy: unstated.\n\n- Size: +12 / -0 across 1 file\n- Commits: 6c1d0fa\n- Files: 1 (0 shared). Source: src/pantry/cli.py\n- Depends on: none\n- Fit: aligned. Already on base.\n- Status: landed: already on base\n- Notes:\n  - Evidence: patch-equivalent commit on base (pass 1, `git log --cherry-pick`).", "order": 20}]}</script>
+<script>
+"use strict";
+const DATA = JSON.parse(document.getElementById('harvest-data').textContent);
+const M = DATA.meta, E = DATA.entries, PENDING = DATA.pending || {};
+const byId = Object.fromEntries(E.map(e => [e.id, e]));
+const dependents = {};
+E.forEach(e => e.depends.forEach(d => (dependents[d] = dependents[d] || []).push(e.id)));
+const KEY = 'harvest-report:' + (M.head_sha || M.ledger_name) + ':r' + M.round;
+const UIKEY = 'harvest-report-ui:' + (M.head_sha || M.ledger_name);
+const MODES = ['cherry-pick', 'rework', 'rebuild'];
+const $ = s => document.querySelector(s);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
+const MAC = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent), MOD = MAC ? 'Cmd' : 'Ctrl', MODK = MAC ? '⌘' : 'Ctrl ';
+const plural = (n, w, p) => n + ' ' + (n === 1 ? w : (p || w + 's'));
+
+// ---- icons --------------------------------------------------------------------------------------
+const IC = {
+  'cherry-pick': '<path d="M2 8h9.5M8 4.5 11.5 8 8 11.5"/><path d="M14 3v10"/>',
+  rework: '<path d="M2.8 7.2A5.2 5.2 0 0 1 12 4.6L13.2 6"/><path d="M13.4 2.6V6H10"/><path d="M13.2 8.8A5.2 5.2 0 0 1 4 11.4L2.8 10"/><path d="M2.6 13.4V10H6"/>',
+  rebuild: '<rect x="2" y="9" width="5.5" height="4.5" rx="1"/><rect x="8.5" y="9" width="5.5" height="4.5" rx="1"/><rect x="5.25" y="3" width="5.5" height="4.5" rx="1"/>',
+  left: '<circle cx="8" cy="8" r="5.6"/><path d="M4 12 12 4"/>',
+  warn: '<path d="M8 2.2 14.3 13.3H1.7z"/><path d="M8 6.6v3.1M8 11.6v.01"/>',
+  chat: '<path d="M2.5 3.5h11v7.2H7.6L4.6 13v-2.3H2.5z"/>',
+  check: '<path d="m3 8.5 3.2 3L13 4.5"/>',
+  up: '<path d="m4 10 4-4 4 4"/>', down: '<path d="m4 6 4 4 4-4"/>',
+  prev: '<path d="m10 3.5-4.5 4.5 4.5 4.5"/>', next: '<path d="m6 3.5 4.5 4.5L6 12.5"/>',
+  close: '<path d="m4 4 8 8M12 4l-8 8"/>',
+  scissors: '<circle cx="4" cy="4.5" r="2"/><circle cx="4" cy="11.5" r="2"/><path d="M5.6 5.7 13.5 12M5.6 10.3 13.5 4"/>',
+  copy: '<rect x="5" y="5" width="8.5" height="8.5" rx="1.5"/><path d="M11 5V3.5A1 1 0 0 0 10 2.5H3.5a1 1 0 0 0-1 1V10a1 1 0 0 0 1 1H5"/>',
+  download: '<path d="M8 2.5v8M4.5 7 8 10.5 11.5 7M2.5 13.5h11"/>',
+  file: '<path d="M4 1.8h5l3.2 3.2V14H4z"/><path d="M9 1.8V5h3.2"/><path d="M6 8.5h4M6 11h4"/>',
+  sync: '<path d="M13 6.5A5 5 0 0 0 3.6 5M3 9.5A5 5 0 0 0 12.4 11"/><path d="M3.3 2.5v2.8h2.8M12.7 13.5v-2.8H9.9"/>',
+  upload: '<path d="M8 10.5v-8M4.5 6 8 2.5 11.5 6M2.5 13.5h11"/>',
+  trash: '<path d="M3 4.5h10M6.5 4.5V3h3v1.5M4.5 4.5l.6 9h5.8l.6-9"/>',
+  sun: '<circle cx="8" cy="8" r="3"/><path d="M8 1.5v1.5M8 13v1.5M1.5 8H3M13 8h1.5M3.4 3.4l1 1M11.6 11.6l1 1M3.4 12.6l1-1M11.6 4.4l1-1"/>',
+  info: '<circle cx="8" cy="8" r="6"/><path d="M8 7.2v3.8M8 5v.01"/>',
+  spark: '<path d="M8 1.8v3M8 11.2v3M1.8 8h3M11.2 8h3M3.6 3.6l2 2M10.4 10.4l2 2M3.6 12.4l2-2M10.4 5.6l2-2"/>',
+  claude: '<path d="M8 2v12M2 8h12M3.8 3.8l8.4 8.4M12.2 3.8l-8.4 8.4"/>',
+  link: '<path d="M6.5 9.5 9.5 6.5"/><path d="M7 4.5 8.5 3a2.5 2.5 0 0 1 3.5 3.5L10.5 8M9 11.5 7.5 13A2.5 2.5 0 0 1 4 9.5L5.5 8"/>',
+  undo: '<path d="M5.5 3.5 2.5 6.5l3 3"/><path d="M2.5 6.5h7a4 4 0 0 1 0 8H7"/>'
+};
+const ic = (n, cls) => '<svg class="i' + (cls ? ' ' + cls : '') + '" viewBox="0 0 16 16" aria-hidden="true">' + IC[n] + '</svg>';
+const MODE_INFO = {
+  'cherry-pick': {label: 'Cherry-pick', key: '1', blurb: "bring head's code over as written"},
+  rework: {label: 'Rework', key: '2', blurb: 'keep the intent, refactor the code to fit the yardstick'},
+  rebuild: {label: 'Rebuild', key: '3', blurb: 'write a brief, add your enhancements, implement from scratch'},
+  left: {label: 'Leave', key: 'X', blurb: 'not coming to base'}
+};
+const KIND_LABEL = {feature: 'Feature', plumbing: 'Plumbing', headonly: 'Head-only', setaside: 'Already on base'};
+
+// ---- state: the human's draft, separate from the ledger (shape unchanged from v1) ---------------
+let S = {entries: {}, general: '', nextQ: 1};
+const ui = {sel: null, view: 'review', filter: 'all', q: '', drafts: {}, editing: null, cutOpen: {}, lsOk: true, notices: [],
+            fsa: {handle: null, state: 'none', last: null, err: null}, savedAt: null, seen: {}, fresh: {id: null, qids: []},
+            theme: 'auto', dismissed: {}, hover: null};
+
+const ledgerEff = e => {
+  const s = e.status;
+  return s.kind === 'picked' ? {kind: 'picked', mode: s.mode, batch: s.batch || null} : {kind: s.kind};
+};
+function eff(e) {
+  const led = ledgerEff(e);
+  if (led.kind === 'landed') return led;
+  const st = S.entries[e.id];
+  let r = led;
+  if (st && st.mode !== undefined) {
+    r = st.mode === 'open' ? {kind: 'open'} : st.mode === 'left' ? {kind: 'left'}
+      : {kind: 'picked', mode: st.mode, batch: led.kind === 'picked' ? led.batch : null};
+  }
+  if (r.kind === 'picked' && st && st.batch !== undefined) r = Object.assign({}, r, {batch: st.batch || null});
+  return r;
+}
+const decidable = e => ledgerEff(e).kind !== 'landed';
+const defaultBatch = t => t.toLowerCase().replace(/[^a-z0-9\s-]/g, '').trim().split(/\s+/).slice(0, 4).join('-');
+const batchName = e => eff(e).batch || defaultBatch(e.title);
+const get = id => (S.entries[id] = S.entries[id] || {});
+function prune(id) {
+  const st = S.entries[id]; if (!st) return;
+  if (st.comments && !st.comments.length) delete st.comments;
+  if (st.cuts) { Object.keys(st.cuts).forEach(k => { if (!st.cuts[k].trim()) delete st.cuts[k]; }); if (!Object.keys(st.cuts).length) delete st.cuts; }
+  if (!Object.keys(st).length) delete S.entries[id];
+}
+function setMode(id, m) {
+  const e = byId[id], cur = eff(e), st = get(id), led = ledgerEff(e);
+  const same = (m === 'left' && cur.kind === 'left') || (cur.kind === 'picked' && cur.mode === m);
+  st.mode = same ? 'open' : m;
+  const now = st.mode === 'open' ? {kind: 'open'} : st.mode === 'left' ? {kind: 'left'} : {kind: 'picked', mode: st.mode};
+  if (now.kind === led.kind && now.mode === led.mode) delete st.mode;
+  prune(id);
+}
+function isChanged(e) {
+  const f = eff(e), led = ledgerEff(e);
+  return f.kind !== led.kind || f.mode !== led.mode || (f.kind === 'picked' && (f.batch || null) !== (led.batch || null));
+}
+function warnings() {
+  const w = [];
+  E.forEach(e => {
+    if (eff(e).kind !== 'picked') return;
+    e.depends.forEach(d => {
+      const k = eff(byId[d]).kind;
+      if (k === 'picked' || k === 'landed') return;
+      const how = ((S.entries[e.id] || {}).cuts || {})[d] || '';
+      w.push({from: e.id, dep: d, state: k, cut: how.trim()});
+    });
+  });
+  return w;
+}
+function depReasons(e) {
+  const out = {}, re = /\b(F\d+|S\d+|Plumbing|Head-only)\b\s*(\(([^()]*)\))?/g; let m;
+  while ((m = re.exec(e.depends_raw || ''))) if (m[3] && !out[m[1]]) out[m[1]] = m[3];
+  return out;
+}
+const stateOf = e => { const f = eff(e); return e.kind === 'setaside' ? 'aside' : f.kind; };
+const answeredNotes = e => e.notes.filter(n => n.kind === 'question' && n.answer && n.qid);
+const freshAnswers = e => M.ingested_round ? answeredNotes(e).filter(n => n.round === M.ingested_round) : [];
+const unseen = e => freshAnswers(e).filter(n => !ui.seen[n.qid]);
+
+// ---- responses (see responses.schema.md; unchanged from v1) --------------------------------------
+function buildResponses() {
+  const out = {};
+  E.forEach(e => {
+    const st = S.entries[e.id]; if (!st) return;
+    const o = {title: e.title, status: e.status_raw}, led = ledgerEff(e);
+    if (led.kind !== 'landed') {
+      const cur = eff(e);
+      const modeChanged = cur.kind !== led.kind || cur.mode !== led.mode;
+      if (modeChanged) o.mode = cur.kind === 'picked' ? cur.mode : cur.kind;
+      if (cur.kind === 'picked' && (modeChanged || (cur.batch || null) !== (led.batch || null))) o.batch = cur.batch || null;
+    }
+    const cuts = Object.entries(st.cuts || {}).filter(([d, h]) => h.trim() && e.depends.includes(d)).map(([dep, how]) => ({dep, how: how.trim()}));
+    if (cuts.length) o.cuts = cuts;
+    if ((st.comments || []).length) o.comments = st.comments.map(c => ({id: c.id, kind: c.kind, text: c.text, created: c.created}));
+    if (Object.keys(o).length > 2) out[e.id] = o;
+  });
+  return {
+    schema: 'harvest-responses/1', round: M.round, created: new Date().toISOString(),
+    ledger: {name: M.ledger_name, sha256: M.ledger_sha256, head: M.head, head_sha: M.head_sha, base: M.base, base_sha: M.base_sha, updated: M.updated},
+    entries: out, general_notes: (S.general || '').trim()
+  };
+}
+const respText = () => JSON.stringify(buildResponses(), null, 2);
+function tallies() {
+  const W = warnings(), un = W.filter(w => !w.cut);
+  const dec = E.filter(decidable);
+  const c = {picked: 0, left: 0, open: 0};
+  dec.forEach(e => c[eff(e).kind]++);
+  const landed = E.filter(e => !decidable(e) && e.kind !== 'setaside').length, aside = E.filter(e => e.kind === 'setaside').length;
+  const com = Object.values(S.entries).flatMap(s => s.comments || []);
+  const nq = com.filter(x => x.kind === 'question').length;
+  const changes = E.filter(e => decidable(e) && isChanged(e)).length;
+  const resp = buildResponses();
+  return {W, un, dec: dec.length, decided: c.picked + c.left, picked: c.picked, left: c.left, open: c.open, landed, aside,
+          nq, nn: com.length - nq, changes, touched: Object.keys(resp.entries).length + (resp.general_notes ? 1 : 0)};
+}
+function plan() {
+  const groups = new Map();
+  E.forEach(e => { if (eff(e).kind === 'picked') { const n = batchName(e); if (!groups.has(n)) groups.set(n, []); groups.get(n).push(e); } });
+  const names = [...groups.keys()], after = {};
+  names.forEach(n => {
+    after[n] = new Set();
+    groups.get(n).forEach(e => e.depends.forEach(d => { const t = byId[d]; if (eff(t).kind === 'picked' && batchName(t) !== n) after[n].add(batchName(t)); }));
+  });
+  const order = [], done = new Set(); let guard = 0, cyc = false;
+  while (order.length < names.length && guard++ < 500) {
+    const next = names.find(n => !done.has(n) && [...after[n]].every(a => done.has(a)));
+    if (!next) { cyc = true; const n = names.find(x => !done.has(x)); order.push(n); done.add(n); continue; }
+    order.push(next); done.add(next);
+  }
+  return {order, groups, after, cyc};
+}
+
+// ---- persistence: localStorage draft, optional file via File System Access ----------------------
+function load() {
+  try {
+    const raw = localStorage.getItem(KEY);
+    if (raw) {
+      const d = JSON.parse(raw);
+      S = Object.assign({entries: {}, general: '', nextQ: 1}, d.state);
+      const gone = Object.keys(S.entries).filter(id => !byId[id]);
+      gone.forEach(id => delete S.entries[id]);
+      if (d.ledger_sha256 !== M.ledger_sha256) ui.notices.push('Your draft was started against a different render of the ledger' + (gone.length ? '; marks for ' + gone.join(', ') + ' were dropped (no longer in the ledger)' : '') + '.');
+      ui.savedAt = d.saved;
+    }
+  } catch (err) { ui.lsOk = false; }
+  try {
+    const u = JSON.parse(localStorage.getItem(UIKEY) || '{}');
+    ui.seen = u.seen || {}; ui.theme = u.theme || 'auto'; ui.dismissed = u.dismissed || {};
+    if (u.sel && u.sel[M.round] && byId[u.sel[M.round]]) ui.sel = u.sel[M.round];
+    ui.uiSel = u.sel || {};
+  } catch (err) { ui.uiSel = {}; }
+}
+function persist() {
+  try {
+    ui.savedAt = new Date().toISOString();
+    localStorage.setItem(KEY, JSON.stringify({v: 1, ledger_sha256: M.ledger_sha256, saved: ui.savedAt, state: S}));
+    ui.lsOk = true;
+  } catch (err) { ui.lsOk = false; }
+  scheduleFsa();
+}
+function persistUi() {
+  try { ui.uiSel = ui.uiSel || {}; ui.uiSel[M.round] = ui.sel; localStorage.setItem(UIKEY, JSON.stringify({seen: ui.seen, theme: ui.theme, dismissed: ui.dismissed, sel: ui.uiSel})); } catch (err) {}
+}
+const idb = {
+  open: () => new Promise((res, rej) => { const r = indexedDB.open('harvest-report', 1); r.onupgradeneeded = () => r.result.createObjectStore('h'); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }),
+  async get(k) { const db = await this.open(); return new Promise((res, rej) => { const q = db.transaction('h').objectStore('h').get(k); q.onsuccess = () => res(q.result); q.onerror = () => rej(q.error); }); },
+  async set(k, v) { const db = await this.open(); return new Promise((res, rej) => { const t = db.transaction('h', 'readwrite'); t.objectStore('h').put(v, k); t.oncomplete = () => res(); t.onerror = () => rej(t.error); }); }
+};
+let fsaTimer = null;
+function scheduleFsa() { if (ui.fsa.state !== 'on') return; clearTimeout(fsaTimer); fsaTimer = setTimeout(fsaWrite, 500); }
+async function fsaWrite() {
+  try {
+    const w = await ui.fsa.handle.createWritable();
+    await w.write(respText()); await w.close();
+    ui.fsa.last = new Date(); ui.fsa.err = null;
+  } catch (err) { ui.fsa.err = String(err.message || err); ui.fsa.state = 'lost'; }
+  renderSaved();
+}
+async function fsaPick() {
+  try {
+    const h = await window.showSaveFilePicker({suggestedName: fileName(), types: [{description: 'JSON', accept: {'application/json': ['.json']}}]});
+    ui.fsa.handle = h; ui.fsa.state = 'on';
+    try { await idb.set(KEY, h); } catch (e) {}
+    await fsaWrite();
+    toast('Keeping ' + h.name + ' in sync. Tell Claude where it is.');
+  } catch (err) { if (err.name !== 'AbortError') ui.fsa.err = String(err.message || err); }
+  renderSaved();
+}
+async function fsaReconnect() {
+  try {
+    const p = await ui.fsa.handle.requestPermission({mode: 'readwrite'});
+    if (p === 'granted') { ui.fsa.state = 'on'; await fsaWrite(); }
+  } catch (err) { ui.fsa.err = String(err.message || err); }
+  renderSaved();
+}
+async function fsaRestore() {
+  if (!window.showSaveFilePicker) return;
+  try {
+    const h = await idb.get(KEY); if (!h) return;
+    ui.fsa.handle = h;
+    const p = await h.queryPermission({mode: 'readwrite'});
+    ui.fsa.state = p === 'granted' ? 'on' : 'ask';
+    if (ui.fsa.state === 'on') await fsaWrite();
+  } catch (err) { /* handle unusable: pick again */ }
+  renderSaved();
+}
+function importState(r) {
+  if (!r || r.schema !== 'harvest-responses/1') throw new Error('not a harvest-responses/1 file');
+  const ns = {entries: {}, general: r.general_notes || '', nextQ: 1};
+  let maxQ = 0;
+  Object.entries(r.entries || {}).forEach(([id, o]) => {
+    if (!byId[id]) { ui.notices.push('Import skipped ' + id + ': not in this ledger.'); return; }
+    const st = {};
+    if (o.mode) st.mode = o.mode;
+    if (o.batch !== undefined && o.batch !== null) st.batch = o.batch;
+    if (o.cuts && o.cuts.length) { st.cuts = {}; o.cuts.forEach(c => st.cuts[c.dep] = c.how); }
+    if (o.comments && o.comments.length) {
+      st.comments = o.comments.slice();
+      o.comments.forEach(c => { const m = /\.q(\d+)$/.exec(c.id || ''); if (m) maxQ = Math.max(maxQ, +m[1]); });
+    }
+    ns.entries[id] = st;
+  });
+  ns.nextQ = maxQ + 1; S = ns;
+  if (r.round !== M.round) ui.notices.push('Imported a round-' + r.round + ' file into a round-' + M.round + ' page.');
+  if (r.ledger && r.ledger.sha256 !== M.ledger_sha256) ui.notices.push('The imported file was made against a different render of the ledger.');
+}
+const fileName = () => 'responses-r' + M.round + '.json';
+
+// ---- undo ---------------------------------------------------------------------------------------
+const hist = [];
+function act(label, fn, opts) {
+  opts = opts || {};
+  const before = JSON.stringify(S);
+  fn();
+  if (JSON.stringify(S) === before) { refresh(); return; }
+  hist.push({before, label}); if (hist.length > 200) hist.shift();
+  persist(); refresh();
+  if (opts.toast !== false) toast(label, true);
+}
+function undo() {
+  const h = hist.pop(); if (!h) { toast('Nothing to undo'); return; }
+  S = JSON.parse(h.before); persist(); refresh(); toast('Undone: ' + h.label);
+}
+let fieldSnap = null;   // one undo step per text-field edit, not per keystroke
+
+// ---- formatting ---------------------------------------------------------------------------------
+function fmt(s, opts) {
+  let h = esc(s);
+  h = h.replace(/`([^`]+)`/g, '<code>$1</code>');
+  h = h.replace(/(^|[\s(])((?:[\w.-]+\/)*[\w-]+\.(?:md|py|toml|json|ya?ml|ts|js|go|rs|lock|txt|cfg|ini)(?::\d+(?:-\d+)?)?)(?=[\s,.;:)]|$)/g, '$1<span class="cite">$2</span>');
+  h = h.replace(/(^|[\s(])(ADR-\d+)\b/g, '$1<span class="cite">$2</span>');
+  if (opts && opts.sha) h = h.replace(/(^|[\s(,])([0-9a-f]{7,12})\b(?![^<]*<\/(?:code|span)>)/g, '$1<code>$2</code>');
+  return h;
+}
+function whyHTML(w) {
+  if (!w || /^unstated\.?$/i.test(w.trim())) return '<span class="mono" style="color:var(--ink-3)">unstated</span>';
+  const m = /^"(.*)"\s*(\((.*)\))?\.?$/.exec(w.trim());
+  if (m) return '<q>' + esc(m[1]) + '</q>' + (m[3] ? ' <span class="mono" style="color:var(--ink-3)">' + fmt(m[3], {sha: 1}) + '</span>' : '');
+  return fmt(w, {sha: 1});
+}
+function fitText(e) { return e.fit_raw.replace(/^(aligned|tension|conflict)\.?\s*/i, ''); }
+function sizeParts(e) {
+  const m = /\+([\d,]+)\s*\/\s*-([\d,]+)/.exec(e.size || ''), f = /across\s+(\d+)\s+files?/.exec(e.size || '');
+  return m ? {a: +m[1].replace(/,/g, ''), d: +m[2].replace(/,/g, ''), files: f ? +f[1] : null} : null;
+}
+const MAXSIZE = Math.max(1, ...E.map(e => { const s = sizeParts(e); return s ? s.a + s.d : 0; }));
+function decisionText(e) {
+  const f = eff(e);
+  if (e.kind === 'setaside') return '<span class="dec">already on base</span>';
+  if (f.kind === 'landed') return '<span class="dec">landed · <span class="b">' + esc(e.status.branch) + '</span></span>';
+  if (f.kind === 'picked') return '<span class="dec picked">' + esc(f.mode) + ' <span class="b">→ ' + esc(batchName(e)) + '</span></span>';
+  if (f.kind === 'left') return '<span class="dec">left</span>';
+  return '<span class="dec">undecided</span>';
+}
+function nodeCls(e, W) {
+  const s = stateOf(e);
+  const warn = W && W.some(w => w.from === e.id && !w.cut);
+  return 'node ' + (s === 'open' ? '' : s) + (warn ? ' warn' : '');
+}
+
+// ---- list ---------------------------------------------------------------------------------------
+const FILTERS = [['all', 'All'], ['open', 'Undecided'], ['picked', 'Picked'], ['left', 'Left'], ['comments', 'Commented'], ['attention', 'Needs attention'], ['answers', 'New answers']];
+function matches(e, W) {
+  const f = eff(e), st = S.entries[e.id] || {};
+  const q = ui.q.trim().toLowerCase();
+  if (q && !(e.id.toLowerCase() === q || (e.id + ' ' + e.title + ' ' + e.description + ' ' + e.why).toLowerCase().includes(q))) return false;
+  switch (ui.filter) {
+    case 'open': return decidable(e) && f.kind === 'open';
+    case 'picked': return f.kind === 'picked';
+    case 'left': return f.kind === 'left';
+    case 'comments': return (st.comments || []).length > 0;
+    case 'attention': return W.some(w => w.from === e.id && !w.cut);
+    case 'answers': return freshAnswers(e).length > 0;
+    default: return true;
+  }
+}
+function visibleIds() { const W = warnings(); return E.filter(e => matches(e, W)).map(e => e.id); }
+function renderFilters(t) {
+  const n = {all: E.length, open: t.open, picked: t.picked, left: t.left,
+    comments: Object.values(S.entries).filter(s => (s.comments || []).length).length, attention: t.un.length,
+    answers: E.filter(e => freshAnswers(e).length).length};
+  $('#filters').innerHTML = FILTERS.filter(([k]) => !((k === 'attention' && !n.attention && ui.filter !== k) || (k === 'answers' && !n.answers) || (k === 'comments' && !n.comments && ui.filter !== k)))
+    .map(([k, l]) => '<button class="chip' + (k === 'attention' ? ' attn' : '') + (k === 'answers' ? ' new' : '') + '" data-act="filter" data-f="' + k + '" aria-pressed="' + (ui.filter === k) + '">' + l + ' <span class="c">' + n[k] + '</span></button>').join('');
+}
+function renderRoundNote() {
+  const fresh = E.reduce((n, e) => n + freshAnswers(e).length, 0), un = E.reduce((n, e) => n + unseen(e).length, 0);
+  const pend = Object.values(PENDING).flat().filter(p => !p.answer).length;
+  let h = '';
+  if (M.round > 1 && fresh && !ui.dismissed['answers-r' + M.round]) {
+    h = '<div class="roundnote">' + ic('spark', 'spark') + '<span>Claude answered <b>' + plural(fresh, 'question') + '</b> from round ' + M.ingested_round + '</span>'
+      + '<button data-act="filter" data-f="answers">' + (ui.filter === 'answers' ? 'Show all' : 'Read them' + (un ? ' (' + un + ' new)' : '')) + '</button></div>';
+  }
+  if (pend) h += '<div class="roundnote" style="background:var(--surface-2);border-color:var(--line-2)">' + ic('info') + '<span>' + plural(pend, 'question') + ' from round ' + (M.round - 1) + ' not answered in the ledger yet</span></div>';
+  $('#roundnote').innerHTML = h;
+}
+function rowHTML(e, W, rel) {
+  const st = S.entries[e.id] || {}, sel = ui.sel === e.id;
+  const unresolved = W.filter(w => w.from === e.id && !w.cut);
+  const nC = (st.comments || []).length;
+  const fresh = unseen(e).length;
+  const s = stateOf(e);
+  let flags = '';
+  if (fresh) flags += '<i class="newdot" title="New answer from Claude"></i>';
+  if (unresolved.length) flags += '<span class="w" title="Needs ' + unresolved.map(w => w.dep).join(', ') + '">' + ic('warn') + '</span>';
+  if (nC) flags += '<span class="q" title="' + plural(nC, 'comment') + ' this round">' + ic('chat') + nC + '</span>';
+  if (decidable(e) && isChanged(e)) flags += '<i class="ed" title="Changed from the ledger this round"></i>';
+  const fit = e.fit && e.fit !== 'aligned' && e.fit !== '?' ? '<span class="fitm fit-' + e.fit + '">' + e.fit + '</span>' : '';
+  return '<div role="option" tabindex="-1" id="opt-' + e.id + '" aria-selected="' + sel + '" class="row s-' + s + (sel ? ' sel' : '') + (rel ? ' ' + rel : '') + '" data-act="select" data-id="' + e.id + '">'
+    + '<span class="relmark" aria-hidden="true">' + (rel === 'rel-up' ? '↑' : rel === 'rel-down' ? '↓' : '') + '</span>'
+    + '<span class="' + nodeCls(e, W) + '" data-node="' + e.id + '"></span>'
+    + '<span class="rid">' + esc(e.id) + '</span>'
+    + '<span class="rmain"><span class="rtitle">' + esc(e.title) + '</span><span class="rsub">' + decisionText(e) + fit + '</span></span>'
+    + '<span class="rflags">' + flags + '</span></div>';
+}
+function renderList() {
+  const W = warnings(), sel = ui.sel ? byId[ui.sel] : null;
+  const up = new Set(sel ? sel.depends : []), down = new Set(sel ? (dependents[sel.id] || []) : []);
+  const groups = [['feature', 'Features', 'dependency order'], ['plumbing', 'Other', ''], ['headonly', null], ['setaside', 'Already on base', 'set aside']];
+  let h = '', any = false, other = [];
+  const rows = k => E.filter(e => e.kind === k && matches(e, W));
+  const feat = rows('feature'); other = rows('plumbing').concat(rows('headonly')); const aside = rows('setaside');
+  const block = (label, hint, list) => {
+    if (!list.length) return '';
+    any = true;
+    return '<div class="grp" role="presentation">' + label + (hint ? ' <span class="hint">' + hint + '</span>' : '') + '</div>'
+      + list.map(e => rowHTML(e, W, up.has(e.id) ? 'rel-up' : down.has(e.id) ? 'rel-down' : '')).join('');
+  };
+  h = block('Features', 'dependency order', feat) + block('Other', '', other) + block('Already on base', 'set aside', aside);
+  $('#list').innerHTML = any ? h : '<div class="empty">Nothing matches.<br><button class="btn sm ghost" data-act="clearfilter" style="margin-top:8px">Show everything</button></div>';
+  if (sel) $('#list').setAttribute('aria-activedescendant', 'opt-' + sel.id);
+}
+
+// ---- detail -------------------------------------------------------------------------------------
+function depRow(id, reason, e, dir) {
+  const t = byId[id], k = stateOf(t), W = warnings();
+  let st = k === 'open' ? 'undecided' : k === 'aside' ? 'on base' : k === 'picked' ? eff(t).mode : k;
+  let cls = k === 'picked' || k === 'landed' ? 'ok' : '';
+  if (dir === 'up' && eff(e).kind === 'picked' && !(k === 'picked' || k === 'landed')) {
+    const cut = W.find(w => w.from === e.id && w.dep === id && w.cut);
+    st = cut ? 'cut' : st; cls = cut ? '' : 'bad';
+  }
+  return '<button class="dep" data-act="select" data-id="' + id + '"><span class="' + nodeCls(t) + '"></span><span class="rid">' + esc(id) + '</span>'
+    + '<span style="min-width:0"><span class="t">' + esc(t.title) + '</span>'
+    + '<span class="why2"><span class="st ' + cls + '">' + esc(st) + '</span>' + (reason ? ' · ' + fmt(reason) : '') + '</span></span></button>';
+}
+function resolveHTML(e, W) {
+  let h = '';
+  const f = eff(e);
+  W.filter(w => w.from === e.id).forEach(w => {
+    const d = byId[w.dep], open = ui.cutOpen[e.id + ':' + w.dep];
+    const st = ((S.entries[e.id] || {}).cuts || {})[w.dep] || '';
+    if (w.cut && !open) {
+      h += '<div class="resolve cut"><h4>' + ic('scissors') + 'Cut: ' + esc(e.id) + ' lands without ' + esc(w.dep) + '</h4>'
+        + '<p class="cuttext">“' + esc(w.cut) + '”</p>'
+        + '<div class="acts"><button class="btn sm" data-act="cutedit" data-id="' + e.id + '" data-dep="' + w.dep + '">Edit</button><button class="btn sm ghost" data-act="cutclear" data-id="' + e.id + '" data-dep="' + w.dep + '">Remove cut</button></div></div>';
+      return;
+    }
+    h += '<div class="resolve"><h4>' + ic('warn') + esc(e.id) + ' needs ' + esc(w.dep) + ', which is ' + (w.state === 'open' ? 'undecided' : w.state) + '</h4>'
+      + '<p><b>' + esc(d.title) + '</b>' + (depReasons(e)[w.dep] ? ': ' + fmt(depReasons(e)[w.dep]) : '') + '.</p>'
+      + (open ? '<textarea class="tarea" rows="2" data-k="cut:' + e.id + ':' + w.dep + '" placeholder="How should ' + esc(e.id) + ' land without ' + esc(w.dep) + '? e.g. stub the hook and land the rest">' + esc(st) + '</textarea>' : '')
+      + '<div class="acts">'
+      + (open ? '<button class="btn sm primary" data-act="cutdone" data-id="' + e.id + '" data-dep="' + w.dep + '">Done</button>'
+              : '<button class="btn sm" data-act="select" data-id="' + w.dep + '">Go to ' + esc(w.dep) + '</button>'
+              + '<button class="btn sm" data-act="cutedit" data-id="' + e.id + '" data-dep="' + w.dep + '">' + ic('scissors') + 'Say how to cut it</button>'
+              + '<button class="btn sm ghost" data-act="mode" data-id="' + e.id + '" data-m="' + f.mode + '">Un-pick ' + esc(e.id) + '</button>')
+      + '</div></div>';
+  });
+  const needed = W.filter(w => w.dep === e.id);
+  if (needed.length) {
+    const un = needed.filter(w => !w.cut);
+    h += '<div class="resolve info"><h4>' + ic('info') + 'Picked ' + needed.map(w => w.from).join(', ') + (needed.length > 1 ? ' depend' : ' depends') + ' on this entry</h4>'
+      + '<p>' + (un.length ? 'Pick ' + esc(e.id) + ' too, or say on ' + un.map(w => esc(w.from)).join(', ') + ' how to cut it.' : 'The dependency is cut, so this can stay ' + (eff(e).kind === 'open' ? 'undecided' : eff(e).kind) + '.') + '</p></div>';
+  }
+  return h;
+}
+function threadHTML(e) {
+  const st = S.entries[e.id] || {}, items = [];
+  const freshQ = ui.fresh.id === e.id ? new Set(ui.fresh.qids) : new Set();
+  e.notes.forEach(n => {
+    if (n.kind === 'question') {
+      items.push('<div class="msg"><div class="av you">You</div><div><div class="mh"><b>You asked</b><span class="meta">' + esc(n.date || '') + (n.qid ? ' · ' + esc(n.qid) : '') + '</span></div><div class="mb">' + fmt(n.text) + '</div>'
+        + (n.answer ? '<div class="msg answer reply' + (freshQ.has(n.qid) ? ' fresh' : '') + '" style="margin-top:10px"><div class="av ai">' + ic('claude') + '</div><div><div class="mh"><b>Claude</b>' + (freshAnswers(e).includes(n) ? '<span class="tag new">' + (freshQ.has(n.qid) ? 'New' : 'Round ' + M.ingested_round) + '</span>' : '') + '</div><div class="mb">' + fmt(n.answer) + '</div></div></div>'
+                    : '<div class="msg wait reply"><div class="av ai">' + ic('claude') + '</div><div class="mb">No answer recorded in the ledger.</div></div>')
+        + '</div></div>');
+    } else if (n.kind === 'note') {
+      items.push('<div class="msg"><div class="av you">You</div><div><div class="mh"><b>Your note</b><span class="meta">' + esc(n.date || '') + (n.qid ? ' · ' + esc(n.qid) : '') + '</span></div><div class="mb">' + fmt(n.text) + '</div></div></div>');
+    } else {
+      items.push('<div class="msg"><div class="av led">' + ic('file') + '</div><div><div class="mh"><b>Ledger note</b></div><div class="mb">' + fmt(n.text) + '</div></div></div>');
+    }
+  });
+  if (e.notes_inline) items.push('<div class="msg"><div class="av led">' + ic('file') + '</div><div><div class="mh"><b>Ledger note</b></div><div class="mb">' + fmt(e.notes_inline) + '</div></div></div>');
+  (PENDING[e.id] || []).forEach(p => items.push('<div class="msg"><div class="av you">You</div><div><div class="mh"><b>You asked</b><span class="meta">round ' + p.round + ' · ' + esc(p.id) + '</span></div><div class="mb">' + fmt(p.text) + '</div>'
+    + (p.answer ? '<div class="msg answer reply" style="margin-top:10px"><div class="av ai">' + ic('claude') + '</div><div><div class="mh"><b>Claude</b><span class="tag note">Not in ledger yet</span></div><div class="mb">' + fmt(p.answer) + '</div></div></div>'
+                : '<div class="msg wait reply"><div class="av ai">' + ic('claude') + '</div><div class="mb">Awaiting an answer: not in the ledger yet.</div></div>') + '</div></div>'));
+  (st.comments || []).forEach(c => {
+    const editing = ui.editing === c.id;
+    items.push('<div class="msg mine"><div class="av you">You</div><div><div class="mh"><b>' + (c.kind === 'question' ? 'Question' : 'Note') + '</b><span class="tag ' + (c.kind === 'note' ? 'note' : 'draft') + '">' + (c.kind === 'note' ? 'Note · this round' : 'Draft · this round') + '</span><span class="meta">' + esc(c.id) + '</span>'
+      + (editing ? '' : '<span class="tools"><button data-act="editc" data-id="' + e.id + '" data-cid="' + c.id + '">Edit</button><button data-act="flipc" data-id="' + e.id + '" data-cid="' + c.id + '">Make ' + (c.kind === 'question' ? 'note' : 'question') + '</button><button data-act="delc" data-id="' + e.id + '" data-cid="' + c.id + '">Delete</button></span>') + '</div>'
+      + (editing ? '<textarea class="tarea" data-edit="' + c.id + '" rows="2">' + esc(c.text) + '</textarea><div class="acts" style="display:flex;gap:6px;margin-top:6px"><button class="btn sm primary" data-act="savec" data-id="' + e.id + '" data-cid="' + c.id + '">Save</button><button class="btn sm ghost" data-act="canceledit">Cancel</button></div>'
+                 : '<div class="mb">' + fmt(c.text) + '</div>') + '</div></div>');
+  });
+  const n = items.length;
+  return '<div class="sec" id="conv"><div class="sech">Questions and notes' + (n ? ' <span class="c">' + n + '</span>' : '') + '</div>'
+    + (n ? '<div class="thread">' + items.join('') + '</div>' : '')
+    + '<div class="composer"><textarea data-k="c:' + e.id + '" rows="1" placeholder="Ask Claude about ' + esc(e.id) + ', or leave a note for landing…" aria-label="Question or note about ' + esc(e.id) + '">' + esc(ui.drafts[e.id] || '') + '</textarea>'
+    + '<div class="cbar"><span class="hint">Answered together when you send the round</span><span class="grow"></span>'
+    + '<button class="btn sm ghost" data-act="addc" data-kind="note" data-id="' + e.id + '" title="Shift+' + MOD + '+Enter">Add note</button>'
+    + '<button class="btn sm primary" data-act="addc" data-kind="question" data-id="' + e.id + '" title="' + MOD + '+Enter">Ask <kbd>' + MODK + '↵</kbd></button></div></div></div>';
+}
+function factsHTML(e) {
+  const s = sizeParts(e);
+  return '<div class="sec facts"><div class="sech">Ledger facts</div><dl>'
+    + '<dt>Size</dt><dd>' + (s ? '<span class="mono"><span style="color:var(--teal-text)">+' + s.a.toLocaleString() + '</span> <span style="color:var(--verm)">−' + s.d.toLocaleString() + '</span></span> ' + esc((e.size.split(/across/)[1] || '').trim() ? 'across ' + e.size.split(/across/)[1].trim() : '') : esc(e.size)) + '</dd>'
+    + '<dt>Commits</dt><dd>' + esc(e.commits).replace(/\b([0-9a-f]{7,12})\b/g, '<span class="sha">$1</span>') + '</dd>'
+    + '<dt>Files</dt><dd>' + fmt(e.files) + '</dd>'
+    + '<dt>Status</dt><dd class="mono">' + esc(e.status_raw) + '</dd></dl>'
+    + '<details class="raw"><summary>' + ic('next', 'chev') + 'Ledger text, verbatim</summary><pre>' + esc(e.raw) + '</pre></details></div>';
+}
+function renderDetail(keepScroll) {
+  const e = byId[ui.sel], sc = $('#dscroll');
+  if (!e) { sc.innerHTML = '<div class="empty">Select an entry.</div>'; $('#dock').innerHTML = ''; return; }
+  const top = sc.scrollTop, W = warnings();
+  const ids = visibleIds(), i = ids.indexOf(e.id);
+  const prev = i > 0 ? ids[i - 1] : null, next = i >= 0 && i < ids.length - 1 ? ids[i + 1] : null;
+  const s = sizeParts(e), feats = E.filter(x => x.kind === 'feature');
+  const pos = e.kind === 'feature' ? (feats.indexOf(e) + 1) + ' of ' + feats.length : KIND_LABEL[e.kind].toLowerCase();
+  let h = '<div class="sheet"><svg class="i regm tl" viewBox="0 0 16 16"><circle cx="8" cy="8" r="3.4"/><path d="M8 0v16M0 8h16"/></svg><svg class="i regm tr" viewBox="0 0 16 16"><circle cx="8" cy="8" r="3.4"/><path d="M8 0v16M0 8h16"/></svg><svg class="i regm bl" viewBox="0 0 16 16"><circle cx="8" cy="8" r="3.4"/><path d="M8 0v16M0 8h16"/></svg><svg class="i regm br" viewBox="0 0 16 16"><circle cx="8" cy="8" r="3.4"/><path d="M8 0v16M0 8h16"/></svg>'
+    + '<div class="kicker"><button class="btn sm ghost back" data-act="back">' + ic('prev') + 'List</button><span class="eid">' + esc(e.id) + '</span><span>' + esc(KIND_LABEL[e.kind]) + (e.kind === 'feature' ? ' · ' + pos + '<span class="kpos-long"> in dependency order</span>' : '') + '</span><span class="rule"></span>'
+    + '<span class="nav"><button data-act="nav" data-d="-1" title="Previous (K)" aria-label="Previous entry"' + (prev ? '' : ' disabled') + '>' + ic('up') + '</button><button data-act="nav" data-d="1" title="Next (J)" aria-label="Next entry"' + (next ? '' : ' disabled') + '>' + ic('down') + '</button></span></div>'
+    + '<h2 class="title" id="dtitle">' + esc(e.title) + '</h2>'
+    + '<p class="lede">' + fmt(e.description) + '</p>'
+    + '<div class="why"><span class="lbl">Head’s reason</span>' + whyHTML(e.why) + '</div>'
+    + (s ? '<div class="stats"><span><span class="add">+' + s.a.toLocaleString() + '</span> <span class="del">−' + s.d.toLocaleString() + '</span>' + dstat(s) + '</span>'
+      + (s.files != null ? '<span>' + plural(s.files, 'file') + '</span>' : '') + '<span>' + plural((e.commits.match(/\b[0-9a-f]{7,12}\b/g) || []).length, 'commit') + '</span>'
+      + '<span title="Relative to the largest entry">size <span class="sizebar"><i style="width:' + Math.max(3, Math.round(100 * Math.sqrt((s.a + s.d) / MAXSIZE))) + '%"></i></span></span></div>' : '');
+  if (e.kind === 'headonly') h += '<div class="kindnote">' + ic('info') + '<span>Head rules keep this work off base. Harvest only offers it if you ask for it.</span></div>';
+  if (e.kind === 'plumbing') h += '<div class="kindnote">' + ic('info') + '<span>Changes with no user-facing intent: formatting, dependency bumps, CI, renames.</span></div>';
+  h += resolveHTML(e, W);
+  const reasons = depReasons(e), downs = dependents[e.id] || [];
+  h += '<div class="sec"><div class="two">'
+    + '<div class="card fitcard ' + esc(e.fit) + '"><div style="display:flex;align-items:center"><span class="fitbadge"><span class="dot"></span>' + esc(e.fit === '?' ? 'Fit unknown' : e.fit[0].toUpperCase() + e.fit.slice(1)) + '</span><span class="scale" aria-hidden="true"><i></i><i></i><i></i></span></div>'
+    + '<p>' + fmt(fitText(e)) + '</p><span class="mono" style="font-size:11px;color:var(--ink-3)">judged against base’s yardstick</span></div>'
+    + '<div class="card deps">' + (e.depends.length ? '<div class="dh">Builds on</div>' + e.depends.map(d => depRow(d, reasons[d], e, 'up')).join('') : '<div class="dh">Builds on</div><div class="nodeps">Nothing. It can land on its own.</div>')
+    + (downs.length ? '<div class="dh">Needed by</div>' + downs.map(d => depRow(d, depReasons(byId[d])[e.id], e, 'down')).join('') : '')
+    + '</div></div></div>';
+  h += threadHTML(e) + factsHTML(e) + '</div>';
+  sc.innerHTML = h;
+  sc.scrollTop = keepScroll ? top : 0;
+  autosize(sc.querySelector('[data-k^="c:"]'));
+  renderDock(e);
+}
+function dstat(s) {
+  const tot = s.a + s.d, n = 5, a = tot ? Math.round(n * s.a / tot) : 0, d = tot ? Math.min(n - a, Math.round(n * s.d / tot)) : 0;
+  let h = '<span class="dstat" aria-hidden="true">';
+  for (let i = 0; i < n; i++) h += '<i class="' + (i < a ? 'a' : i < a + d ? 'd' : '') + '"></i>';
+  return h + '</span>';
+}
+function modeButtons(e, compact) {
+  const f = eff(e);
+  return '<div class="modes" role="group" aria-label="Decision for ' + esc(e.id) + '">' + MODES.concat(['left']).map(m => {
+    const on = m === 'left' ? f.kind === 'left' : f.kind === 'picked' && f.mode === m, info = MODE_INFO[m];
+    return '<button class="mb2' + (m === 'left' ? ' leave' : '') + '" data-act="mode" data-id="' + e.id + '" data-m="' + m + '" aria-pressed="' + on + '" title="' + esc(info.label + ': ' + info.blurb) + (on ? ' (press again to undo)' : '') + '">'
+      + ic(m) + '<span>' + info.label + '</span>' + (compact ? '' : '<kbd>' + info.key + '</kbd>') + '</button>';
+  }).join('') + '</div>';
+}
+function batchField(e, id) {
+  const f = eff(e);
+  if (f.kind !== 'picked') return '';
+  return '<div class="batch"><label for="' + id + '">batch</label><span class="pre">harvest/</span><input id="' + id + '" list="batchlist" data-k="batch:' + e.id + '" value="' + esc(f.batch || '') + '" placeholder="' + esc(defaultBatch(e.title)) + '" spellcheck="false" autocomplete="off" title="Picks with the same batch land on one branch. Empty: its own branch."></div>';
+}
+function renderDock(e) {
+  const f = eff(e), led = ledgerEff(e);
+  let h = '<div class="dockin">';
+  if (!decidable(e)) {
+    h += '<div class="dockdone"><span class="' + nodeCls(e) + '"></span>' + (e.kind === 'setaside' ? 'Already on base. Nothing to decide; the evidence is in the notes.' : 'Landed on <span class="mono">' + esc(e.status.branch) + '</span>. Nothing to decide.') + '</div>';
+  } else {
+    const cur = f.kind === 'picked' ? f.mode : f.kind === 'left' ? 'left' : null;
+    const ledTxt = led.kind === 'picked' ? led.mode + (led.batch ? ' → ' + led.batch : '') : led.kind === 'open' ? 'undecided' : led.kind;
+    h += '<div class="dockr">' + modeButtons(e) + '</div>'
+      + '<div class="dockl"><span class="dl-t"><b>' + (cur ? MODE_INFO[cur].label : 'Undecided') + '</b><span class="blurb"> · ' + (cur ? MODE_INFO[cur].blurb : 'pick a landing mode, or leave it') + '</span></span>'
+      + (isChanged(e) ? '<span class="was">was ' + esc(ledTxt) + ' · <button data-act="reset" data-id="' + e.id + '" title="Back to the ledger’s status">Revert</button></span>' : (led.kind !== 'open' ? '<span class="was">from the ledger</span>' : ''))
+      + batchField(e, 'batch-dock') + '</div>';
+  }
+  $('#dock').innerHTML = h + '</div>';
+}
+function autosize(t) { if (!t) return; t.style.height = 'auto'; t.style.height = Math.min(260, t.scrollHeight + 2) + 'px'; }
+
+// ---- top bar ------------------------------------------------------------------------------------
+function renderTop(t) {
+  $('#refs').innerHTML = '<span class="ref" title="head ' + esc(M.head_sha) + '">' + esc(M.head) + '</span><svg class="i arrow" viewBox="0 0 16 16"><path d="M2 8h11M9.5 4.5 13 8l-3.5 3.5"/></svg><span class="ref base" title="base ' + esc(M.base_sha) + '">' + esc(M.base) + '</span><span class="round">Round ' + M.round + '</span>';
+  const W = t.W, segs = E.filter(decidable).map(e => {
+    const k = eff(e).kind, warn = W.some(w => w.from === e.id && !w.cut);
+    return '<button class="seg ' + k + (warn ? ' warn' : '') + (ui.sel === e.id ? ' cur' : '') + '" data-act="select" data-id="' + e.id + '" title="' + esc(e.id + ' · ' + e.title + ' · ' + (k === 'picked' ? eff(e).mode : k === 'open' ? 'undecided' : k)) + '" aria-label="' + esc(e.id) + '"></button>';
+  }).join('');
+  $('#progress').innerHTML = '<div class="segs" role="group" aria-label="Decisions, in dependency order">' + segs + '</div><span class="ptext"><b>' + t.decided + '</b>/' + t.dec + ' decided</span>';
+  $('#plan-n').textContent = t.un.length ? '•' : '';
+  $('#plan-n').title = t.un.length ? plural(t.un.length, 'dependency issue') : '';
+  const sb = $('#sendbtn');
+  const ready = t.decided === t.dec && !t.un.length;
+  if (ready && !sb.classList.contains('ready')) { sb.classList.add('ready'); if (ui.wasReady === false) celebrate(); }
+  if (!ready) sb.classList.remove('ready');
+  ui.wasReady = ready;
+  renderSaved();
+}
+function renderSaved() {
+  const fs = ui.fsa; let h;
+  if (!ui.lsOk) h = '<span class="saved bad">' + ic('warn') + '<span class="lbl">Not saved in this browser: send or download before closing</span></span>';
+  else h = ic('check') + '<span class="lbl">' + (ui.savedAt ? 'Saved ' + new Date(ui.savedAt).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'}) : 'Saved locally') + '</span>';
+  if (fs.state === 'on') h = ic('sync') + '<span class="lbl">Syncing ' + esc(fs.handle && fs.handle.name) + '</span>';
+  if (fs.state === 'ask') h = '<button class="btn sm" data-act="fsa-reconnect">' + ic('sync') + 'Reconnect ' + esc(fs.handle.name) + '</button>';
+  if (fs.state === 'lost') h = '<span style="color:var(--verm)">' + ic('warn') + '<span class="lbl">File sync stopped</span></span>';
+  const el = $('#saved'); el.className = 'saved' + (ui.lsOk ? '' : ' bad'); el.innerHTML = h;
+  el.title = ui.lsOk ? 'Your marks, questions and notes are kept in this browser until you send them. Nothing here edits the ledger.' : '';
+}
+function renderNotices() {
+  const bn = [];
+  if (M.parse_warnings.length && !ui.dismissed['pw:' + M.ledger_sha256]) bn.push('<div class="notice">' + ic('warn') + '<details><summary>The ledger did not parse cleanly: ' + plural(M.parse_warnings.length, 'warning') + '. Entries may be missing fields.</summary><ul>' + M.parse_warnings.map(w => '<li>' + esc(w) + '</li>').join('') + '</ul></details><button class="x ibtn" data-act="dismiss" data-k="pw:' + M.ledger_sha256 + '" aria-label="Dismiss">' + ic('close') + '</button></div>');
+  ui.notices.forEach((n, i) => bn.push('<div class="notice">' + ic('info') + '<span>' + esc(n) + '</span><button class="x ibtn" data-act="dismissn" data-i="' + i + '" aria-label="Dismiss">' + ic('close') + '</button></div>'));
+  $('#notices').innerHTML = bn.join('');
+}
+
+// ---- map ----------------------------------------------------------------------------------------
+const MAPW = 208, MAPH = 66, GX = 22, GY = 74;
+let LAYOUT = null;
+function layout() {
+  const nodes = E.filter(e => e.kind === 'feature'), ids = new Set(nodes.map(e => e.id)), depth = {};
+  const dd = e => { if (depth[e.id] != null) return depth[e.id]; depth[e.id] = 0; const ds = e.depends.filter(d => ids.has(d)); depth[e.id] = ds.length ? 1 + Math.max(...ds.map(d => dd(byId[d]))) : 0; return depth[e.id]; };
+  nodes.forEach(dd);
+  const L = []; nodes.forEach(e => (L[depth[e.id]] = L[depth[e.id]] || []).push(e.id));
+  const idx = () => { const p = {}; L.forEach(row => row.forEach((id, i) => p[id] = i + (Math.max(...L.map(r => r.length)) - row.length) / 2)); return p; };
+  for (let it = 0; it < 8; it++) {   // barycentre sweeps to cut crossings
+    let p = idx();
+    for (let l = 1; l < L.length; l++) {
+      const bc = id => { const ps = byId[id].depends.filter(d => ids.has(d)); return ps.length ? ps.reduce((s, d) => s + p[d], 0) / ps.length : p[id]; };
+      L[l].sort((a, b) => bc(a) - bc(b) || p[a] - p[b]); p = idx();
+    }
+    for (let l = L.length - 2; l >= 0; l--) {
+      const bc = id => { const cs = (dependents[id] || []).filter(d => ids.has(d)); return cs.length ? cs.reduce((s, d) => s + p[d], 0) / cs.length : p[id]; };
+      L[l].sort((a, b) => bc(a) - bc(b) || p[a] - p[b]); p = idx();
+    }
+  }
+  // A layer wider than the view wraps into sub-rows, so the map scrolls one way only.
+  const avail = Math.max(3, Math.floor(((($('#mapwrap') || {}).clientWidth || 1100) - 80 + GX) / (MAPW + GX)));
+  const per = Math.min(avail, Math.max(...L.map(r => r.length))), pos = {}, tops = [];
+  let y = 0;
+  L.forEach((row, l) => {
+    tops[l] = y;
+    for (let k = 0; k < row.length; k += per) {
+      const chunk = row.slice(k, k + per), off = (per - chunk.length) * (MAPW + GX) / 2;
+      chunk.forEach((id, i) => pos[id] = {x: off + i * (MAPW + GX), y});
+      y += MAPH + (k + per < row.length ? 16 : GY);
+    }
+  });
+  return {L, pos, tops, w: per * (MAPW + GX) - GX, h: y - GY, ids};
+}
+function chain(id, dir) {
+  const out = new Set(), walk = x => (dir === 'up' ? byId[x].depends : (dependents[x] || [])).forEach(y => { if (!out.has(y)) { out.add(y); walk(y); } });
+  walk(id); return out;
+}
+function renderMap() {
+  LAYOUT = LAYOUT || layout();
+  const {L, pos, tops, w, h, ids} = LAYOUT, W = warnings();
+  const focus = ui.hover && ids.has(ui.hover) ? ui.hover : (ids.has(ui.sel) ? ui.sel : null);
+  const hl = focus ? new Set([focus, ...chain(focus, 'up'), ...chain(focus, 'down')]) : null;
+  let edges = '';
+  E.filter(e => ids.has(e.id)).forEach(e => e.depends.filter(d => ids.has(d)).forEach(d => {
+    const a = pos[d], b = pos[e.id], x1 = a.x + MAPW / 2, y1 = a.y + MAPH, x2 = b.x + MAPW / 2, y2 = b.y, my = Math.min(GY * .9, (y2 - y1) * .5);
+    const fe = eff(e).kind, fd = eff(byId[d]).kind, warn = W.find(x => x.from === e.id && x.dep === d);
+    const cls = warn ? (warn.cut ? 'cut' : 'bad') : (fe === 'picked' || fe === 'landed') && (fd === 'picked' || fd === 'landed') ? 'ok' : '';
+    const on = hl && hl.has(e.id) && hl.has(d) && (e.id === focus || d === focus || (chain(focus, 'up').has(d) && (chain(focus, 'up').has(e.id) || e.id === focus)) || (chain(focus, 'down').has(e.id) && (chain(focus, 'down').has(d) || d === focus)));
+    edges += '<path class="edge ' + cls + (on ? ' hl' : '') + '" d="M' + x1 + ' ' + y1 + ' C' + x1 + ' ' + (y1 + my) + ' ' + x2 + ' ' + (y2 - my) + ' ' + x2 + ' ' + (y2 - 3) + '"/>'
+      + '<path class="arrowhead ' + cls + (on ? ' hl' : '') + '" d="M' + (x2 - 4) + ' ' + (y2 - 7) + ' L' + x2 + ' ' + (y2 - 2) + ' L' + (x2 + 4) + ' ' + (y2 - 7) + '"/>';
+  }));
+  let nodes = '';
+  L.forEach((row, l) => { nodes += '<div class="colh" style="top:' + (tops[l] - 22) + 'px">' + (l === 0 ? 'Depth 0 · stands alone' : 'Depth ' + l) + '</div>'; });
+  E.filter(e => ids.has(e.id)).forEach(e => {
+    const p = pos[e.id], f = eff(e), s = stateOf(e), warn = W.some(x => x.from === e.id && !x.cut);
+    const meta = f.kind === 'picked' ? '<span class="pk">' + esc(f.mode) + '</span>' : f.kind === 'landed' ? '<span>landed</span>' : f.kind === 'left' ? '<span>left</span>' : '<span>undecided</span>';
+    nodes += '<button class="mnode s-' + s + (warn ? ' warn' : '') + (ui.sel === e.id ? ' sel' : '') + (hl && hl.has(e.id) ? ' hl' : '') + '" style="left:' + p.x + 'px;top:' + p.y + 'px;width:' + MAPW + 'px;height:' + MAPH + 'px" data-act="mapsel" data-id="' + e.id + '" data-hover="' + e.id + '" title="' + esc(e.id + ': ' + e.title) + '">'
+      + '<span class="' + nodeCls(e, W) + '"></span><span class="t">' + esc(e.title) + '</span><span class="m"><span class="eid">' + esc(e.id) + '</span>' + meta + (e.fit !== 'aligned' ? '<span class="fitm fit-' + e.fit + '">' + e.fit + '</span>' : '') + '</span></button>';
+  });
+  const tb = '<div class="titleblock"><div>sheet</div><div>dependency map</div><div>head → base</div><div>' + esc(M.head) + ' → ' + esc(M.base) + '</div><div>round</div><div>' + M.round + ' · ' + esc(M.ledger_name) + '</div></div>';
+  const c = $('#canvas');
+  c.style.width = w + 'px'; c.style.height = h + 'px';
+  c.className = 'canvas' + (hl ? ' focused' : '');
+  c.innerHTML = '<svg class="edges" width="' + w + '" height="' + h + '" aria-hidden="true">' + edges + '</svg>' + nodes + tb;
+  $('#legend').innerHTML = '<span><span class="node"></span>undecided</span><span><span class="node picked"></span>picked</span><span><span class="node left"></span>left</span><span><span class="node landed"></span>landed</span>'
+    + '<span><svg viewBox="0 0 26 8"><path d="M1 4h24" stroke="var(--teal)" stroke-width="1.8"/></svg>both picked</span><span><svg viewBox="0 0 26 8"><path d="M1 4h24" stroke="var(--verm)" stroke-width="1.8" stroke-dasharray="5 4"/></svg>picked, needs an unpicked entry</span>'
+    + '<span><svg viewBox="0 0 26 8"><path d="M1 4h24" stroke="var(--ink-3)" stroke-width="1.4" stroke-dasharray="2 4"/></svg>cut</span><span style="color:var(--ink-3)">Each entry sits below what it builds on. Hover to trace a chain.</span>';
+  renderInspector();
+}
+function renderInspector() {
+  const e = byId[ui.sel];
+  if (!e) { $('#insp').innerHTML = '<p class="muted">Select a node.</p>'; return; }
+  const W = warnings(), un = W.filter(w => w.from === e.id && !w.cut);
+  $('#insp').innerHTML = '<div class="kicker" style="margin:0"><span class="eid">' + esc(e.id) + '</span><span>' + esc(KIND_LABEL[e.kind]) + '</span><span class="rule"></span></div>'
+    + '<h3>' + esc(e.title) + '</h3><p class="lede">' + fmt(e.description) + '</p>'
+    + '<div class="card fitcard ' + esc(e.fit) + '"><span class="fitbadge"><span class="dot"></span>' + esc(e.fit) + '</span><p style="font-size:13px">' + fmt(fitText(e)) + '</p></div>'
+    + (un.length ? '<div class="resolve" style="margin:0"><h4>' + ic('warn') + 'Needs ' + un.map(w => w.dep).join(', ') + '</h4><p>Picked, but ' + un.map(w => w.dep + ' is ' + (w.state === 'open' ? 'undecided' : w.state)).join('; ') + '.</p></div>' : '')
+    + (decidable(e) ? modeButtons(e, true) + batchField(e, 'batch-insp') : '<p class="muted">' + (e.kind === 'setaside' ? 'Already on base.' : 'Landed on ' + esc(e.status.branch) + '.') + '</p>')
+    + '<button class="btn" data-act="open" data-id="' + e.id + '">Open in Review ' + ic('next') + '</button>'
+    + '<p class="hintline">Keys work here too: <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> <kbd>X</kbd>, and <kbd>J</kbd>/<kbd>K</kbd> to move.</p>';
+}
+
+// ---- plan ---------------------------------------------------------------------------------------
+function renderPlan() {
+  const t = tallies(), P = plan(), W = t.W;
+  const pill = e => '<button class="pill" data-act="open" data-id="' + e.id + '"><span class="' + nodeCls(e, W) + '"></span><span class="rid">' + esc(e.id) + '</span><span class="t">' + esc(e.title) + '</span></button>';
+  let h = '<div class="planhead"><div style="flex:1;min-width:260px"><h2>Round ' + M.round + ' plan</h2><p>What Claude will do with your decisions. Nothing lands until you confirm in chat.</p></div>'
+    + '<div class="tally"><div class="t-p"><b>' + t.picked + '</b><span>picked</span></div><div><b>' + P.order.length + '</b><span>' + (P.order.length === 1 ? 'branch' : 'branches') + '</span></div><div><b>' + t.left + '</b><span>left</span></div><div><b>' + t.open + '</b><span>undecided</span></div><div><b>' + t.nq + '</b><span>' + (t.nq === 1 ? 'question' : 'questions') + '</span></div>' + (t.un.length ? '<div class="t-w"><b>' + t.un.length + '</b><span>to resolve</span></div>' : '') + '</div></div>';
+  h += '<div class="plangrid"><div>';
+  h += '<section class="panel"><h3>Landing order <span class="c">' + plural(P.order.length, 'branch', 'branches') + ', in dependency order</span></h3>';
+  if (!P.order.length) h += '<p class="muted">Nothing picked yet. Each pick lands on its own branch unless you give several the same batch name.</p>';
+  else {
+    h += '<div class="lane">' + P.order.map((n, i) => {
+      const es = P.groups.get(n), aft = [...P.after[n]];
+      const probs = W.filter(w => !w.cut && es.some(e => e.id === w.from));
+      return '<div class="bstep"><span class="bnum">' + String(i + 1).padStart(2, '0') + '</span><div class="bname">harvest/' + esc(n) + (aft.length ? '<span class="after">branches off ' + aft.map(a => 'harvest/' + esc(a)).join(', ') + '</span>' : '<span class="after">branches off ' + esc(M.base) + '</span>') + '</div>'
+        + '<div class="bents">' + es.map(e => '<button class="bent" data-act="open" data-id="' + e.id + '"><span class="rid">' + esc(e.id) + '</span><span>' + esc(e.title) + '</span><span class="md">' + ic(eff(e).mode) + esc(eff(e).mode) + '</span></button>').join('') + '</div>'
+        + probs.map(w => '<div class="bwarn">' + ic('warn') + esc(w.from) + ' needs ' + esc(w.dep) + ' (' + (w.state === 'open' ? 'undecided' : w.state) + ')</div>').join('') + '</div>';
+    }).join('') + '</div>';
+    if (P.cyc) h += '<div class="bwarn" style="margin-top:12px">' + ic('warn') + 'Some batches depend on each other. Consider merging them into one batch.</div>';
+  }
+  h += '</section>';
+  const left = E.filter(e => decidable(e) && eff(e).kind === 'left'), und = E.filter(e => decidable(e) && eff(e).kind === 'open');
+  h += '<section class="panel"><h3>Left out <span class="c">' + left.length + '</span></h3>' + (left.length ? '<div class="pills">' + left.map(pill).join('') + '</div>' : '<p class="muted">Nothing left out.</p>') + '</section>';
+  h += '<section class="panel"><h3>Undecided <span class="c">' + und.length + '</span></h3>' + (und.length ? '<p class="muted" style="margin-bottom:10px">These stay open in the ledger. You can send now and decide later.</p><div class="pills">' + und.map(pill).join('') + '</div>' : '<p class="muted">Every entry has a decision.</p>') + '</section>';
+  h += '</div><div>';
+  if (t.un.length) h += '<section class="panel attn"><h3>' + ic('warn') + 'Needs attention <span class="c">' + t.un.length + '</span></h3><div class="ilist">' + t.un.map(w => '<button class="iitem" data-act="open" data-id="' + w.from + '"><span class="rid">' + esc(w.from) + '</span><span>' + esc(byId[w.from].title) + '<span class="sub">needs ' + esc(w.dep) + ' · ' + esc(byId[w.dep].title) + ', which is ' + (w.state === 'open' ? 'undecided' : w.state) + '</span></span></button>').join('') + '</div><p class="muted" style="margin-top:10px">You can still send. Claude will ask how to cut each one.</p></section>';
+  const qs = [], ns = [];
+  E.forEach(e => ((S.entries[e.id] || {}).comments || []).forEach(c => (c.kind === 'question' ? qs : ns).push({e, c})));
+  const citem = x => '<button class="iitem" data-act="open" data-id="' + x.e.id + '"><span class="rid">' + esc(x.e.id) + '</span><span>' + esc(x.c.text) + '<span class="sub">' + esc(x.e.title) + '</span></span></button>';
+  h += '<section class="panel"><h3>' + ic('chat') + 'Questions for Claude <span class="c">' + qs.length + '</span></h3>' + (qs.length ? '<div class="ilist">' + qs.map(citem).join('') + '</div>' : '<p class="muted">None yet. Ask from any entry; Claude answers them all in one pass.</p>') + '</section>';
+  if (ns.length) h += '<section class="panel"><h3>Notes for landing <span class="c">' + ns.length + '</span></h3><div class="ilist">' + ns.map(citem).join('') + '</div></section>';
+  h += '<section class="panel"><h3>General notes</h3><textarea class="tarea" id="general" data-k="general" rows="3" placeholder="Anything that is not about one entry: ordering preferences, things to check across features…">' + esc(S.general || '') + '</textarea></section>';
+  h += '</div></div>';
+  h += '<div class="sendcta"><p><b>' + (t.touched ? 'Ready when you are.' : 'Nothing to send yet.') + '</b> <span>' + (t.touched ? 'Claude ingests this into the ledger, answers every question, then renders round ' + (M.round + 1) + '.' : 'Make a decision or ask a question first.') + '</span></p><button class="btn primary" data-act="send">' + ic('copy') + 'Send to Claude</button></div>';
+  $('#plan').innerHTML = h;
+  autosize($('#general'));
+}
+
+// ---- layers -------------------------------------------------------------------------------------
+let lastFocus = null;
+function openLayer(html, cls) {
+  lastFocus = document.activeElement;
+  $('#layer').innerHTML = '<div class="layer ' + (cls || '') + '" data-act="closelayer">' + html + '</div>';
+  const f = $('#layer').querySelector('[autofocus], .bigsend, button:not(.ibtn), button');
+  if (f) f.focus();
+}
+function closeLayer() { $('#layer').innerHTML = ''; if (lastFocus && document.body.contains(lastFocus)) lastFocus.focus(); }
+const layerOpen = () => !!$('#layer').firstChild;
+function openSend() {
+  const t = tallies(), P = plan();
+  const copyText = handoffText(t);
+  let h = '<div class="dialog" role="dialog" aria-modal="true" aria-labelledby="sendh"><div class="dlgh"><div><h2 id="sendh">Send round ' + M.round + ' to Claude</h2><p>One paste hands over every decision and question. Claude answers them all at once.</p></div><button class="ibtn" data-act="closelayer" aria-label="Close">' + ic('close') + '</button></div><div class="dlgb">';
+  h += '<div class="sumrow"><span><b>' + t.picked + '</b> picked · ' + plural(P.order.length, 'branch', 'branches') + '</span><span><b>' + t.left + '</b> left</span><span><b>' + t.open + '</b> undecided</span><span><b>' + t.nq + '</b> ' + (t.nq === 1 ? 'question' : 'questions') + '</span>' + (t.nn ? '<span><b>' + t.nn + '</b> ' + (t.nn === 1 ? 'note' : 'notes') + '</span>' : '') + '</div>';
+  if (!t.touched) h += '<div class="callout">' + ic('info') + '<span>Nothing has changed from the ledger yet, so there is nothing to send. Mark an entry or ask a question first.</span></div>';
+  if (t.un.length) h += '<div class="callout w">' + ic('warn') + '<span>' + plural(t.un.length, 'pick needs', 'picks need') + ' an entry you did not pick (' + t.un.map(w => w.from + '→' + w.dep).join(', ') + '). Claude will ask how to cut ' + (t.un.length === 1 ? 'it' : 'them') + '.</span></div>';
+  if (t.open && t.touched) h += '<div class="callout">' + ic('info') + '<span>' + plural(t.open, 'entry stays', 'entries stay') + ' undecided. That is fine: they remain open for a later round.</span></div>';
+  h += '<button class="bigsend" data-act="copy"' + (t.touched ? '' : ' disabled style="opacity:.45;cursor:not-allowed"') + '>' + ic('copy') + '<span>Copy for Claude</span></button>'
+    + '<div class="steps"><div class="on" id="st1"><i>1</i><span>Copy your round</span></div><div id="st2"><i>2</i><span>Paste it into your Claude session</span></div><div><i>3</i><span>Claude answers and renders round ' + (M.round + 1) + '</span></div></div>'
+    + '<div class="alt"><p class="muted">Or hand it over as a file. Tell Claude where it is.</p><button class="btn sm" data-act="export">' + ic('download') + 'Download ' + fileName() + '</button>'
+    + (window.showSaveFilePicker ? '<button class="btn sm" data-act="fsa">' + ic('sync') + (ui.fsa.state === 'on' ? 'Syncing ' + esc(ui.fsa.handle.name) : 'Keep a file in sync…') + '</button>' : '') + '</div>'
+    + '<details class="peek"><summary>Preview what gets sent (' + copyText.length.toLocaleString() + ' characters)</summary><pre>' + esc(copyText) + '</pre></details>';
+  openLayer(h + '</div></div>');
+}
+function handoffText(t) {
+  t = t || tallies();
+  const bits = [t.picked + ' picked', t.left + ' left', plural(t.nq, 'question')];
+  if (t.un.length) bits.push(plural(t.un.length, 'dependency', 'dependencies') + ' to cut');
+  return 'Harvest responses, round ' + M.round + ' (' + M.ledger_name + '): ' + bits.join(', ') + '. Please ingest these into the ledger and answer the questions.\n```json\n' + respText() + '\n```';
+}
+async function copyResponses() {
+  const text = handoffText();
+  let ok = false;
+  try { await navigator.clipboard.writeText(text); ok = true; } catch (e) {
+    try { const ta = document.createElement('textarea'); ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0'; document.body.appendChild(ta); ta.select(); ok = document.execCommand('copy'); ta.remove(); } catch (e2) {}
+  }
+  const b = document.querySelector('.bigsend');
+  if (ok) {
+    if (b) { b.classList.add('done'); b.innerHTML = ic('check') + '<span>Copied. Now paste it into your Claude session</span>'; }
+    const s2 = $('#st2'); if (s2) s2.classList.add('on');
+    ui.copiedAt = Date.now();
+    return;
+  }
+  const pre = document.querySelector('details.peek'); if (pre) { pre.open = true; const p = pre.querySelector('pre'); const r = document.createRange(); r.selectNodeContents(p); const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r); }
+  toast('Clipboard blocked: the text is selected below. Press Ctrl+C.');
+}
+function download() {
+  const b = new Blob([respText()], {type: 'application/json'}), a = document.createElement('a');
+  a.href = URL.createObjectURL(b); a.download = fileName(); document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  toast('Downloaded ' + fileName() + '. Tell Claude where it landed.');
+}
+function openMenu() {
+  const th = {auto: 'Match system', light: 'Light', dark: 'Dark'};
+  openLayer('<div class="pop" role="menu" aria-label="More">'
+    + '<button role="menuitem" data-act="export">' + ic('download') + '<span>Download ' + fileName() + '</span></button>'
+    + (window.showSaveFilePicker ? '<button role="menuitem" data-act="fsa">' + ic('sync') + '<span>Keep a file in sync…<span class="sub">Chromium: rewrites the file on every change</span></span></button>' : '')
+    + '<button role="menuitem" data-act="import">' + ic('upload') + '<span>Import a responses file…</span></button>'
+    + '<hr><button role="menuitem" data-act="theme">' + ic('sun') + '<span>Theme: ' + th[ui.theme] + '</span></button>'
+    + '<button role="menuitem" data-act="help">' + ic('info') + '<span>Keyboard shortcuts</span></button>'
+    + '<hr><div class="info"><b>ledger</b> ' + esc(M.ledger_name) + '<br><b>head</b> ' + esc(M.head) + ' @ ' + esc(M.head_sha) + '<br><b>base</b> ' + esc(M.base) + ' @ ' + esc(M.base_sha) + '<br><b>updated</b> ' + esc(M.updated) + '<br><b>sha256</b> ' + esc(M.ledger_sha256.slice(0, 16)) + '…</div>'
+    + '<hr><button role="menuitem" class="danger" data-act="resetdraft">' + ic('trash') + '<span>Discard this round’s draft…</span></button></div>', 'menu');
+}
+function openHelp() {
+  const k = (keys, label) => '<div><span>' + label + '</span><span>' + keys.map(x => '<kbd>' + x + '</kbd>').join('') + '</span></div>';
+  openLayer('<div class="dialog" role="dialog" aria-modal="true" aria-labelledby="helph"><div class="dlgh"><div><h2 id="helph">Keyboard</h2><p>Review a whole ledger without touching the mouse.</p></div><button class="ibtn" data-act="closelayer" aria-label="Close">' + ic('close') + '</button></div><div class="dlgb"><div class="keys">'
+    + '<h4>Move</h4>' + k(['J', '↓'], 'Next entry') + k(['K', '↑'], 'Previous entry') + k(['N'], 'Next undecided') + k(['/'], 'Filter the list')
+    + '<h4>Decide</h4>' + k(['1'], 'Cherry-pick') + k(['2'], 'Rework') + k(['3'], 'Rebuild') + k(['X'], 'Leave') + k(['B'], 'Edit batch name') + k(['U', MODK.trim() + 'Z'], 'Undo')
+    + '<h4>Ask</h4>' + k(['C'], 'Write a question') + k([MODK.trim() + '↵'], 'Ask Claude') + k(['⇧' + MODK.trim() + '↵'], 'Add as a note') + k(['Esc'], 'Leave the text box')
+    + '<h4>Views</h4>' + k(['R'], 'Review') + k(['M'], 'Map') + k(['P'], 'Plan') + k(['S'], 'Send to Claude')
+    + '</div><p class="muted" style="margin-top:14px">Press a mode again to clear it. Every change can be undone.</p></div></div>');
+}
+function confirmReset() {
+  openLayer('<div class="dialog" role="alertdialog" aria-modal="true" aria-labelledby="rh" style="width:min(460px,calc(100vw - 32px))"><div class="dlgh"><div><h2 id="rh">Discard this round’s draft?</h2><p>Every mark, question and note you made on this page goes. The ledger is not touched. You can undo this until you close the page.</p></div></div><div class="dlgb" style="display:flex;gap:8px;justify-content:flex-end"><button class="btn" data-act="closelayer" autofocus>Keep it</button><button class="btn danger" data-act="doreset">Discard draft</button></div></div>');
+}
+let toastTimer = null;
+function toast(msg, undoable) {
+  clearTimeout(toastTimer);
+  $('#toastbox').innerHTML = '<div class="toast" role="status"><span>' + esc(msg) + '</span>' + (undoable ? '<button data-act="undo">Undo</button>' : '') + '</div>';
+  toastTimer = setTimeout(() => { $('#toastbox').innerHTML = ''; }, undoable ? 5000 : 3200);
+}
+function celebrate() {
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const c = document.createElement('canvas'); c.className = 'confetti'; c.width = innerWidth; c.height = innerHeight; document.body.appendChild(c);
+  const g = c.getContext('2d'), sb = $('#sendbtn').getBoundingClientRect(), cs = getComputedStyle(document.documentElement);
+  const cols = [cs.getPropertyValue('--teal'), cs.getPropertyValue('--verm'), cs.getPropertyValue('--ink-2'), cs.getPropertyValue('--ochre')];
+  const ps = Array.from({length: 46}, () => ({x: sb.left + sb.width / 2, y: sb.bottom, vx: (Math.random() - .5) * 9, vy: Math.random() * 6 + 2, r: Math.random() * 6.28, s: Math.random() * 4 + 3, c: cols[Math.floor(Math.random() * cols.length)]}));
+  let f = 0;
+  (function tick() {
+    g.clearRect(0, 0, c.width, c.height);
+    ps.forEach(p => { p.x += p.vx; p.y += p.vy; p.vy += .22; p.vx *= .985; p.r += .2; g.save(); g.translate(p.x, p.y); g.rotate(p.r); g.fillStyle = p.c; g.globalAlpha = Math.max(0, 1 - f / 80); g.fillRect(-p.s / 2, -1, p.s, 2); g.restore(); });
+    if (++f < 80) requestAnimationFrame(tick); else c.remove();
+  })();
+  toast('Every entry has a decision. Send it to Claude when you are ready.');
+}
+
+// ---- refresh & navigation -----------------------------------------------------------------------
+function applyTheme() { if (ui.theme === 'auto') document.documentElement.removeAttribute('data-theme'); else document.documentElement.setAttribute('data-theme', ui.theme); }
+function refresh(opts) {
+  opts = opts || {};
+  const t = tallies();
+  renderTop(t); renderNotices();
+  if (ui.view === 'review') { renderFilters(t); renderRoundNote(); renderList(); if (!opts.skipDetail) renderDetail(!opts.resetScroll); }
+  else if (ui.view === 'map') renderMap();
+  else renderPlan();
+  // The batch suggestions follow the current picks.
+  const names = [...new Set(E.filter(e => eff(e).kind === 'picked').map(batchName))];
+  $('#batchlist').innerHTML = names.map(n => '<option value="' + esc(n) + '">').join('');
+}
+function select(id, opts) {
+  if (!byId[id]) return;
+  opts = opts || {};
+  const e = byId[id];
+  ui.fresh = {id, qids: unseen(e).map(n => n.qid)};
+  ui.fresh.qids.forEach(q => ui.seen[q] = 1);
+  ui.sel = id; ui.editing = null; persistUi();
+  if (ui.view === 'review' && !opts.boot) document.getElementById('app').classList.add('mdetail');
+  refresh({resetScroll: true});
+  if (ui.view === 'review') {
+    const r = document.getElementById('opt-' + id); if (r) r.scrollIntoView({block: 'nearest'});
+    if (opts.flash) { const n = document.querySelector('#opt-' + id + ' .node'); if (n) { n.classList.remove('pop'); void n.offsetWidth; n.classList.add('pop'); } }
+  }
+  if (ui.view === 'map') { const n = document.querySelector('.mnode.sel'); if (n) n.scrollIntoView({block: 'nearest', inline: 'nearest'}); }
+}
+function move(d) {
+  const ids = ui.view === 'map' && LAYOUT ? E.filter(e => LAYOUT.ids.has(e.id)).map(e => e.id) : visibleIds();
+  if (!ids.length) return;
+  const i = ids.indexOf(ui.sel);
+  const j = i < 0 ? 0 : Math.max(0, Math.min(ids.length - 1, i + d));
+  if (ids[j] !== ui.sel) select(ids[j]);
+}
+function nextUndecided() {
+  const order = E.filter(decidable);
+  const i = order.findIndex(e => e.id === ui.sel);
+  const rot = order.slice(i + 1).concat(order.slice(0, i + 1));
+  const n = rot.find(e => eff(e).kind === 'open');
+  if (n) { if (!visibleIds().includes(n.id)) { ui.filter = 'all'; ui.q = ''; $('#q').value = ''; } select(n.id); }
+  else toast('Nothing undecided left.');
+}
+function setView(v) {
+  ui.view = v; document.getElementById('app').dataset.view = v;
+  document.querySelectorAll('.views button').forEach(b => b.setAttribute('aria-selected', String(b.dataset.v === v)));
+  refresh({resetScroll: false});
+  if (v === 'map') { const n = document.querySelector('.mnode.sel'); if (n) n.scrollIntoView({block: 'center', inline: 'center'}); }
+}
+addEventListener('resize', () => { if (LAYOUT) { LAYOUT = null; if (ui.view === 'map') renderMap(); } });
+function mark(id, m) {
+  const e = byId[id]; if (!e || !decidable(e)) return;
+  const before = eff(e);
+  act('', () => setMode(id, m), {toast: false});
+  const after = eff(e);
+  const what = after.kind === 'picked' ? MODE_INFO[after.mode].label.toLowerCase() : after.kind === 'left' ? 'left' : 'undecided';
+  toast(id + ' · ' + what + (after.kind === 'picked' ? ' → harvest/' + batchName(e) : ''), true);
+  hist[hist.length - 1] && (hist[hist.length - 1].label = id + ' ' + what);
+  const n = document.querySelector('#opt-' + id + ' .node'); if (n && before.kind !== after.kind) { n.classList.remove('pop'); void n.offsetWidth; n.classList.add('pop'); }
+}
+function addComment(id, kind) {
+  const ta = document.querySelector('[data-k="c:' + id + '"]');
+  const t = ((ta && ta.value) || ui.drafts[id] || '').trim(); if (!t) { if (ta) ta.focus(); return; }
+  ui.drafts[id] = '';
+  act(kind === 'note' ? 'Note added to ' + id : 'Question added to ' + id, () => {
+    const st = get(id); st.comments = st.comments || [];
+    st.comments.push({id: 'r' + M.round + '.q' + S.nextQ++, kind: kind || 'question', text: t, created: new Date().toISOString()});
+  });
+  const nt = document.querySelector('[data-k="c:' + id + '"]'); if (nt) nt.focus();
+}
+
+// ---- events -------------------------------------------------------------------------------------
+document.addEventListener('click', ev => {
+  const t = ev.target.closest('[data-act]'); if (!t) return;
+  const a = t.dataset.act, id = t.dataset.id;
+  if (a === 'closelayer' && t.classList.contains('layer') && ev.target !== t) return;   // clicks inside the dialog
+  switch (a) {
+    case 'select': select(id); break;
+    case 'open': if (ui.view !== 'review') setView('review'); select(id); break;
+    case 'mapsel': select(id); break;
+    case 'nav': move(+t.dataset.d); break;
+    case 'back': document.getElementById('app').classList.remove('mdetail'); break;
+    case 'view': setView(t.dataset.v); break;
+    case 'filter': ui.filter = ui.filter === t.dataset.f && t.dataset.f !== 'all' ? 'all' : t.dataset.f; refresh({skipDetail: true}); break;
+    case 'clearfilter': ui.filter = 'all'; ui.q = ''; $('#q').value = ''; refresh({skipDetail: true}); break;
+    case 'mode': mark(id, t.dataset.m); break;
+    case 'reset': act('Reverted ' + id + ' to the ledger', () => { delete get(id).mode; delete get(id).batch; prune(id); }); break;
+    case 'addc': addComment(id, t.dataset.kind); break;
+    case 'delc': act('Deleted a comment on ' + id, () => { const st = get(id); st.comments = (st.comments || []).filter(c => c.id !== t.dataset.cid); prune(id); }); break;
+    case 'flipc': act('Changed a comment on ' + id, () => { const c = get(id).comments.find(c => c.id === t.dataset.cid); c.kind = c.kind === 'question' ? 'note' : 'question'; }, {toast: false}); break;
+    case 'editc': ui.editing = t.dataset.cid; renderDetail(true); { const x = document.querySelector('[data-edit="' + t.dataset.cid + '"]'); if (x) { autosize(x); x.focus(); x.setSelectionRange(x.value.length, x.value.length); } } break;
+    case 'savec': { const x = document.querySelector('[data-edit="' + t.dataset.cid + '"]'), v = x ? x.value.trim() : ''; ui.editing = null;
+      if (v) act('Edited a comment on ' + id, () => { get(id).comments.find(c => c.id === t.dataset.cid).text = v; }, {toast: false}); else renderDetail(true); break; }
+    case 'canceledit': ui.editing = null; renderDetail(true); break;
+    case 'cutedit': ui.cutOpen[id + ':' + t.dataset.dep] = true; renderDetail(true); { const x = document.querySelector('[data-k="cut:' + id + ':' + t.dataset.dep + '"]'); if (x) { x.focus(); x.setSelectionRange(x.value.length, x.value.length); } } break;
+    case 'cutdone': delete ui.cutOpen[id + ':' + t.dataset.dep]; refresh(); break;
+    case 'cutclear': act('Removed the cut on ' + id, () => { const st = get(id); if (st.cuts) delete st.cuts[t.dataset.dep]; prune(id); }); break;
+    case 'send': openSend(); break;
+    case 'copy': copyResponses(); break;
+    case 'export': closeLayer(); download(); break;
+    case 'fsa': closeLayer(); fsaPick(); break;
+    case 'fsa-reconnect': fsaReconnect(); break;
+    case 'import': closeLayer(); $('#importfile').click(); break;
+    case 'menu': openMenu(); break;
+    case 'help': closeLayer(); openHelp(); break;
+    case 'theme': ui.theme = {auto: 'light', light: 'dark', dark: 'auto'}[ui.theme]; applyTheme(); persistUi(); openMenu(); break;
+    case 'resetdraft': closeLayer(); confirmReset(); break;
+    case 'doreset': closeLayer(); act('Discarded the draft', () => { S = {entries: {}, general: '', nextQ: 1}; ui.drafts = {}; }); break;
+    case 'undo': undo(); break;
+    case 'closelayer': closeLayer(); break;
+    case 'dismiss': ui.dismissed[t.dataset.k] = 1; persistUi(); renderNotices(); break;
+    case 'dismissn': ui.notices.splice(+t.dataset.i, 1); renderNotices(); break;
+  }
+});
+document.addEventListener('focusin', ev => { const k = ev.target.dataset && ev.target.dataset.k; if (k && !k.startsWith('c:')) fieldSnap = JSON.stringify(S); });
+document.addEventListener('focusout', ev => {
+  const k = ev.target.dataset && ev.target.dataset.k;
+  if (k && !k.startsWith('c:') && fieldSnap && fieldSnap !== JSON.stringify(S)) { hist.push({before: fieldSnap, label: k.startsWith('batch') ? 'batch name' : k.startsWith('cut') ? 'cut' : 'general notes'}); }
+  fieldSnap = null;
+  // When focus moves to a button, that button's click re-renders; re-rendering here would swap it out mid-click.
+  if (k && k.startsWith('batch') && !(ev.relatedTarget && ev.relatedTarget.closest('button'))) refresh();
+});
+document.addEventListener('input', ev => {
+  const el = ev.target;
+  if (el.id === 'q') { ui.q = el.value; renderList(); return; }
+  if (el.matches('textarea')) autosize(el);
+  const k = el.dataset && el.dataset.k; if (!k) return;
+  const v = el.value, p = k.split(':');
+  if (p[0] === 'c') { ui.drafts[p[1]] = v; return; }
+  if (p[0] === 'general') S.general = v;
+  else if (p[0] === 'batch') { get(p[1]).batch = v; prune(p[1]); }
+  else if (p[0] === 'cut') { const st = get(p[1]); st.cuts = st.cuts || {}; st.cuts[p[2]] = v; prune(p[1]); }
+  persist();
+  // Typing never re-renders the field being typed in; only the surroundings follow.
+  const t = tallies(); renderTop(t);
+  if (ui.view === 'review') { renderList(); }
+});
+document.addEventListener('mouseover', ev => {
+  const n = ev.target.closest && ev.target.closest('[data-hover]');
+  const id = n ? n.dataset.hover : null;
+  if (id !== ui.hover && ui.view === 'map') { ui.hover = id; renderMap(); }
+});
+document.addEventListener('keydown', ev => {
+  const t = ev.target, typing = t.matches && t.matches('input,textarea,[contenteditable="true"]');
+  if (ev.key === 'Escape') { if (layerOpen()) { closeLayer(); return; } if (typing) { t.blur(); $('#list').focus({preventScroll: true}); return; } if (document.getElementById('app').classList.contains('mdetail')) document.getElementById('app').classList.remove('mdetail'); return; }
+  if ((ev.ctrlKey || ev.metaKey) && ev.key === 'Enter') {
+    if (t.dataset && t.dataset.k && t.dataset.k.startsWith('c:')) { ev.preventDefault(); addComment(t.dataset.k.slice(2), ev.shiftKey ? 'note' : 'question'); return; }
+    if (t.dataset && t.dataset.edit) { ev.preventDefault(); const b = document.querySelector('[data-act="savec"][data-cid="' + t.dataset.edit + '"]'); if (b) b.click(); return; }
+  }
+  if (t.id === 'q' && (ev.key === 'Enter' || ev.key === 'ArrowDown')) { ev.preventDefault(); t.blur(); const ids = visibleIds(); if (ids.length) select(ids[0]); return; }
+  if (t.dataset && t.dataset.k && t.dataset.k.startsWith('batch') && ev.key === 'Enter') { t.blur(); return; }
+  if (typing) return;
+  if (layerOpen()) { if (ev.key === '?') closeLayer(); return; }
+  if ((ev.ctrlKey || ev.metaKey) && !ev.shiftKey && ev.key.toLowerCase() === 'z') { ev.preventDefault(); undo(); return; }
+  if (ev.ctrlKey || ev.metaKey || ev.altKey) return;
+  const k = ev.key, sel = ui.sel;
+  const map = {'1': 'cherry-pick', '2': 'rework', '3': 'rebuild', 'x': 'left', 'X': 'left', '0': 'left'};
+  if (map[k] && sel && ui.view !== 'plan') { ev.preventDefault(); mark(sel, map[k]); return; }
+  switch (k) {
+    case 'j': case 'ArrowDown': if (ui.view !== 'plan') { ev.preventDefault(); move(1); } break;
+    case 'k': case 'ArrowUp': if (ui.view !== 'plan') { ev.preventDefault(); move(-1); } break;
+    case 'n': ev.preventDefault(); if (ui.view === 'plan') setView('review'); nextUndecided(); break;
+    case '/': ev.preventDefault(); if (ui.view !== 'review') setView('review'); $('#q').focus(); $('#q').select(); break;
+    case 'c': case 'q': if (ui.view !== 'review') setView('review'); { ev.preventDefault(); const c = document.querySelector('[data-k^="c:"]'); if (c) { c.scrollIntoView({block: 'center'}); c.focus(); } } break;
+    case 'b': { const b = document.querySelector(ui.view === 'map' ? '#batch-insp' : '#batch-dock'); if (b) { ev.preventDefault(); b.focus(); b.select(); } } break;
+    case 'u': ev.preventDefault(); undo(); break;
+    case 'r': setView('review'); break;
+    case 'm': setView('map'); break;
+    case 'p': setView('plan'); break;
+    case 's': ev.preventDefault(); openSend(); break;
+    case '?': openHelp(); break;
+    case 'Enter': if (ui.view === 'map' && sel) { setView('review'); select(sel); } break;
+  }
+});
+$('#importfile').addEventListener('change', async ev => {
+  const f = ev.target.files[0]; if (!f) return;
+  try { const before = JSON.stringify(S); importState(JSON.parse(await f.text())); hist.push({before, label: 'import'}); persist(); refresh(); toast('Imported ' + f.name, true); }
+  catch (err) { ui.notices.push('Import failed: ' + err.message); refresh(); }
+  ev.target.value = '';
+});
+addEventListener('storage', ev => { if (ev.key === KEY && ev.newValue) { try { S = JSON.parse(ev.newValue).state; refresh(); toast('Updated from another tab'); } catch (e) {} } });
+
+// ---- boot ---------------------------------------------------------------------------------------
+document.title = 'harvest · ' + (M.head || '') + ' → ' + (M.base || '') + ' · round ' + M.round;
+load(); applyTheme();
+if (!ui.sel) {
+  const firstNew = E.find(e => unseen(e).length), firstOpen = E.find(e => decidable(e) && eff(e).kind === 'open');
+  ui.sel = (firstNew || firstOpen || E[0] || {}).id || null;
+}
+ui.wasReady = null;
+if (ui.sel) select(ui.sel, {boot: true}); else refresh();
+ui.wasReady = (() => { const t = tallies(); return t.decided === t.dec && !t.un.length; })();
+fsaRestore();
+window.__harvest = {buildResponses, handoffText, get state() { return S; }, select, setView};
+</script>
+</body>
+</html>
