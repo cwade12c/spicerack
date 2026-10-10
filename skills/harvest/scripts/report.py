@@ -16,8 +16,8 @@ render
 check
     Validates a harvest-responses/1 file and compares it with the current ledger. Prints
     one line per finding: STALE, GAP, HEAD CHANGED, LEDGER CHANGED, MISSING ENTRY,
-    TITLE CHANGED, STATUS CHANGED, LANDED, DEPENDENCY, or the SCHEMA problems.
-    Exit 0: safe to ingest (LEDGER CHANGED and DEPENDENCY lines are advisory).
+    TITLE CHANGED, STATUS CHANGED, LANDED, DEPENDENCY, STALE CUT, or the SCHEMA problems.
+    Exit 0: safe to ingest (LEDGER CHANGED, DEPENDENCY and STALE CUT lines are advisory).
     Exit 1: resolve every line before applying anything.
 """
 import argparse
@@ -135,6 +135,9 @@ def parse_depends(raw, eid, warns):
             warns.append("%s: a cut must name the dependency it cuts, as 'cut F4: <how>': %r" % (eid, m.group(2)[:40]))
         elif m.group(1) not in deps:
             warns.append("%s: cuts %s, which is not in its Depends on ids" % (eid, m.group(1)))
+        elif m.group(1) in cuts:
+            warns.append("%s: cuts %s twice; keep one clause (the last one is read)" % (eid, m.group(1)))
+            cuts[m.group(1)] = m.group(2)
         elif m.group(2):
             cuts[m.group(1)] = m.group(2)
     return deps, cuts
@@ -421,17 +424,17 @@ def cmd_check(a):
             return "picked" if cur["kind"] == "picked" else cur["kind"]
         return "picked" if m in MODES else m
     for e in entries:
-        if eff(e["id"]) != "picked":
-            continue
         cuts = set(e["cuts"]) | {c.get("dep") for c in (r.get("entries") or {}).get(e["id"], {}).get("cuts", [])}
         for d in e["depends"]:
-            if eff(d) not in ("picked", "landed") and d not in cuts:
+            if d in cuts and eff(d) in ("picked", "landed"):
+                notes.append("STALE CUT %s→%s: %s is %s; drop the cut" % (e["id"], d, d, eff(d)))
+            elif eff(e["id"]) == "picked" and eff(d) not in ("picked", "landed") and d not in cuts:
                 notes.append("DEPENDENCY %s is picked but needs %s (%s) and no cut was given" % (e["id"], d, eff(d)))
     for x in notes:
         print(x)
     if not problems and not notes:
         print("OK: responses round %d matches the ledger" % rr)
-    return 1 if (problems or any(not n.startswith(("LEDGER CHANGED", "DEPENDENCY")) for n in notes)) else 0
+    return 1 if (problems or any(not n.startswith(("LEDGER CHANGED", "DEPENDENCY", "STALE CUT")) for n in notes)) else 0
 
 
 def main():

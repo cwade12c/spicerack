@@ -50,6 +50,7 @@ It validates the file and compares it with the ledger. Exit 0 means it is safe t
 | `TITLE CHANGED <id>` | Same id, different feature. | Ask before applying. |
 | `STATUS CHANGED <id>` | The entry's status moved since render, for example it landed. | Apply its questions and notes. Do not apply `mode` or `batch`; show the human both and ask. |
 | `LANDED <id>` | A mark on something that already landed. | Skip the mark, keep the comments. |
+| `STALE CUT <id>→<dep>` (advisory) | A cut whose dependency is picked or landed once this file is applied. | Drop the cut, as in section 5. |
 | `DEPENDENCY <id> is picked but needs <dep>` (advisory) | A pick whose dependency is not picked, landed or cut. | Apply the marks, then ask the human how to cut it or whether to pick the dependency. |
 | `SCHEMA` and its lines | The file is malformed. | Report the lines. Do not repair the file by hand. |
 
@@ -78,7 +79,9 @@ Work in `entries` order, and leave each entry's other lines untouched.
 
 The id is what lets the next page put the answer under its question. Keep earlier `Notes:` lines as they are.
 
-**Cuts.** A `cuts` item `{dep, how}` means the human accepts landing the entry without `dep`. Append `; cut <dep>: <how>` to the entry's `Depends on:` line, after its ids and any prose, and add a `Note` line with the human's words. Landing reads the cut when it orders work, and the next page shows the dependency as cut.
+**Cuts.** A `cuts` item `{dep, how}` sets how the entry lands without `dep`. If the entry's `Depends on:` line already has a `cut <dep>:` clause, replace its text; otherwise append `; cut <dep>: <how>` at the end of the line, after its ids and any prose. Keep cut clauses last, write the how on one line, and change any `;` in it to `,`. Add a `Note` line with the human's words. Landing reads the cut when it orders work, and the next page shows the dependency as cut.
+
+**Stale cuts.** A cut whose dependency is now picked or landed no longer applies, whether the pick came from this file or from chat. Delete its `cut <dep>:` clause and add a `Note` saying so; `check` lists each one as `STALE CUT`. A cut on an entry that is no longer picked stays, in case it is picked again.
 
 **General notes.** Add each as a header line `Note (r<round>): <text>`. Act on anything in it that is an instruction (an ordering preference, an entry to skip) and say what you did.
 
@@ -143,7 +146,7 @@ Schema `harvest-responses/1`, written by the page and read by `check` and by you
 | `entries.<id>.status` | string, required | The ledger's `Status:` value as rendered, so a status that moved since shows. |
 | `entries.<id>.mode` | `cherry-pick` \| `rework` \| `rebuild` \| `left` \| `open`, optional | Present only when the human changed the mark. `open` undoes a pick. Absent means keep the ledger's status. Never present on a landed entry. |
 | `entries.<id>.batch` | string \| null, optional | With a pick mode: a batch name, or `null` for the default (one branch per feature). |
-| `entries.<id>.cuts` | array of `{dep, how}`, optional | Dependencies the human cut on this page. Cuts already in the ledger are not repeated. |
+| `entries.<id>.cuts` | array of `{dep, how}`, optional | Each sets how the entry lands without `dep`: a new cut, or new text for a cut the ledger already has. A cut that matches the ledger's is not repeated. |
 | `entries.<id>.comments` | array, optional | In the order written. Each has `id` (`r<round>.q<n>`, unique in the file), `kind` (`question` or `note`), `text`, and `created`. |
 | `general_notes` | string, required (may be empty) | Notes that belong to no entry. |
 

@@ -347,6 +347,34 @@ def run(p, name):
     shot(pg, "08-ledger-cut.png")
     r = sh("check", str(out / "responses-r2.json"), str(out / "ledger-cut.md"))
     check("DEPENDENCY" not in r.stdout, "check honours the ledger's cut too")
+
+    ledger_how, new_how = "land with a manual retry hook (r1.q3)", "bring over F4's _retry_delay only"
+
+    def edit_cut(text, seeded=None):
+        pg.click('[data-act="cutedit"][data-id="F5"]')
+        if seeded is not None:
+            check(pg.input_value('[data-k="cut:F5:F4"]') == seeded, "Edit opens with the ledger's text")
+        pg.fill('[data-k="cut:F5:F4"]', text)
+        pg.click('[data-act="cutdone"][data-id="F5"]')
+
+    edit_cut(new_how, seeded=ledger_how)
+    check(responses(pg)["entries"]["F5"].get("cuts") == [{"dep": "F4", "how": new_how}], "an edited ledger cut is sent as the new {dep, how}")
+    check(f"Was “{ledger_how}” in the ledger" in pg.inner_text("#dscroll") and pg.locator('[data-act="cutrevert"]').count() == 1,
+          "the edited cut shows the ledger's text and an Undo edit button")
+    shot(pg, "09-ledger-cut-edited.png")
+    (out / "responses-cut-edit.json").write_text(json.dumps(responses(pg)))
+    r = sh("check", str(out / "responses-cut-edit.json"), str(out / "ledger-cut.md"))
+    check(r.returncode == 0 and "DEPENDENCY" not in r.stdout and "STALE CUT" not in r.stdout, "check accepts the edited cut")
+    pg.click('[data-act="cutrevert"]')
+    check("F5" not in responses(pg)["entries"] and "From the ledger" in pg.inner_text("#dscroll"), "Undo edit restores the ledger's cut")
+    edit_cut(new_how)
+    key(pg, "u")
+    check("F5" not in responses(pg)["entries"], "U undoes an edit")
+    edit_cut(new_how)
+    key(pg, "Control+z")
+    check("F5" not in responses(pg)["entries"], "Ctrl+Z undoes an edit")
+    edit_cut(ledger_how)
+    check("F5" not in responses(pg)["entries"], "editing a cut back to the ledger's text sends nothing")
     pg.close()
 
     # ------------------------------------------------------------------ scale: 40 features

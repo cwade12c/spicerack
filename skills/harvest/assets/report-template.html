@@ -651,7 +651,9 @@ const get = id => (S.entries[id] = S.entries[id] || {});
 function prune(id) {
   const st = S.entries[id]; if (!st) return;
   if (st.comments && !st.comments.length) delete st.comments;
-  if (st.cuts) { Object.keys(st.cuts).forEach(k => { if (!st.cuts[k].trim()) delete st.cuts[k]; }); if (!Object.keys(st.cuts).length) delete st.cuts; }
+  // A draft cut that is empty, or says what the ledger already says, is no change.
+  const ledCuts = (byId[id] && byId[id].cuts) || {};
+  if (st.cuts) { Object.keys(st.cuts).forEach(k => { const v = st.cuts[k].trim(); if (!v || v === (ledCuts[k] || '').trim()) delete st.cuts[k]; }); if (!Object.keys(st.cuts).length) delete st.cuts; }
   if (!Object.keys(st).length) delete S.entries[id];
 }
 function setMode(id, m) {
@@ -673,8 +675,8 @@ function warnings() {
     e.depends.forEach(d => {
       const k = eff(byId[d]).kind;
       if (k === 'picked' || k === 'landed') return;
-      const how = ((S.entries[e.id] || {}).cuts || {})[d] || '', led = (e.cuts || {})[d] || '';
-      w.push({from: e.id, dep: d, state: k, cut: (how || led).trim(), ledgerCut: !how.trim() && !!led});
+      const how = (((S.entries[e.id] || {}).cuts || {})[d] || '').trim(), led = ((e.cuts || {})[d] || '').trim();
+      w.push({from: e.id, dep: d, state: k, cut: how || led, ledCut: led, edited: !!led && !!how && how !== led});
     });
   });
   return w;
@@ -701,7 +703,8 @@ function buildResponses() {
       if (modeChanged) o.mode = cur.kind === 'picked' ? cur.mode : cur.kind;
       if (cur.kind === 'picked' && (modeChanged || (cur.batch || null) !== (led.batch || null))) o.batch = cur.batch || null;
     }
-    const cuts = Object.entries(st.cuts || {}).filter(([d, h]) => h.trim() && e.depends.includes(d)).map(([dep, how]) => ({dep, how: how.trim()}));
+    // A cut sets how the entry lands without dep; one that matches the ledger's is not repeated.
+    const cuts = Object.entries(st.cuts || {}).filter(([d, h]) => h.trim() && e.depends.includes(d) && h.trim() !== ((e.cuts || {})[d] || '').trim()).map(([dep, how]) => ({dep, how: how.trim()}));
     if (cuts.length) o.cuts = cuts;
     if ((st.comments || []).length) o.comments = st.comments.map(c => ({id: c.id, kind: c.kind, text: c.text, created: c.created}));
     if (Object.keys(o).length > 2) out[e.id] = o;
@@ -981,12 +984,17 @@ function resolveHTML(e, W) {
   const f = eff(e);
   W.filter(w => w.from === e.id).forEach(w => {
     const d = byId[w.dep], open = ui.cutOpen[e.id + ':' + w.dep];
-    const st = ((S.entries[e.id] || {}).cuts || {})[w.dep] || '';
+    const st = ((S.entries[e.id] || {}).cuts || {})[w.dep] || w.ledCut || '';
     if (w.cut && !open) {
+      const edit = '<button class="btn sm" data-act="cutedit" data-id="' + e.id + '" data-dep="' + w.dep + '">Edit</button>';
       h += '<div class="resolve cut"><h4>' + ic('scissors') + 'Cut: ' + esc(e.id) + ' lands without ' + esc(w.dep) + '</h4>'
         + '<p class="cuttext">“' + esc(w.cut) + '”</p>'
-        // A cut already in the ledger changes by asking the agent, not here: the responses file only carries new cuts.
-        + (w.ledgerCut ? '<p class="muted">From the ledger. To change it, ask a question on this entry.</p>' : '<div class="acts"><button class="btn sm" data-act="cutedit" data-id="' + e.id + '" data-dep="' + w.dep + '">Edit</button><button class="btn sm ghost" data-act="cutclear" data-id="' + e.id + '" data-dep="' + w.dep + '">Remove cut</button></div>') + '</div>';
+        // A ledger cut has no Remove: un-cut, the pick would just need its dependency again. Pick it, or un-pick this.
+        + (w.edited ? '<p class="muted">Was “' + esc(w.ledCut) + '” in the ledger.</p>' : w.ledCut ? '<p class="muted">From the ledger.</p>' : '')
+        + '<div class="acts">' + edit
+        + (w.edited ? '<button class="btn sm ghost" data-act="cutrevert" data-id="' + e.id + '" data-dep="' + w.dep + '">Undo edit</button>'
+           : w.ledCut ? '' : '<button class="btn sm ghost" data-act="cutclear" data-id="' + e.id + '" data-dep="' + w.dep + '">Remove cut</button>')
+        + '</div></div>';
       return;
     }
     h += '<div class="resolve"><h4>' + ic('warn') + esc(e.id) + ' needs ' + esc(w.dep) + ', which is ' + (w.state === 'open' ? 'undecided' : w.state) + '</h4>'
@@ -1487,6 +1495,7 @@ document.addEventListener('click', ev => {
     case 'canceledit': ui.editing = null; renderDetail(true); break;
     case 'cutedit': ui.cutOpen[id + ':' + t.dataset.dep] = true; renderDetail(true); { const x = document.querySelector('[data-k="cut:' + id + ':' + t.dataset.dep + '"]'); if (x) { x.focus(); x.setSelectionRange(x.value.length, x.value.length); } } break;
     case 'cutdone': delete ui.cutOpen[id + ':' + t.dataset.dep]; refresh(); break;
+    case 'cutrevert': act('Restored the ledger’s cut on ' + id, () => { const st = get(id); if (st.cuts) delete st.cuts[t.dataset.dep]; prune(id); }); break;
     case 'cutclear': act('Removed the cut on ' + id, () => { const st = get(id); if (st.cuts) delete st.cuts[t.dataset.dep]; prune(id); }); break;
     case 'send': openSend(); break;
     case 'copy': copyResponses(); break;

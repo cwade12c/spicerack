@@ -2,8 +2,13 @@
 
     python3 -m unittest discover -s tests/harvest -p 'test_report_parse.py'
 """
+import argparse
+import contextlib
+import io
+import json
 import pathlib
 import sys
+import tempfile
 import unittest
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[2] / "skills/harvest/scripts"))
@@ -85,6 +90,48 @@ class DependsOn(unittest.TestCase):
         self.assertEqual((e["F5"]["cuts"], e["F6"]["cuts"]), ({}, {}))
         self.assertTrue(any(w.startswith("F5: a cut must name") for w in warns), warns)
         self.assertIn("F6: cuts F3, which is not in its Depends on ids", warns)
+
+
+    def test_a_dependency_cut_twice_warns_and_keeps_the_last(self):
+        _, e, warns = parse(entry("F4"), entry("F5", "F4; cut F4: first; cut F4: second"))
+        self.assertEqual(e["F5"]["cuts"], {"F4": "second"})
+        self.assertIn("F5: cuts F4 twice; keep one clause (the last one is read)", warns)
+
+
+class StaleCuts(unittest.TestCase):
+    """check reports a cut whose dependency is picked or landed once the file is applied."""
+
+    def check(self, f4_status="open", f4_mode=None):
+        led = HEADER + entry("F4", status=f4_status) + entry("F5", "F4 (hooks it); cut F4: a manual hook", status="picked: rebuild")
+        entries = {"F4": {"title": "A feature", "status": f4_status, "mode": f4_mode}} if f4_mode else {}
+        resp = {"schema": "harvest-responses/1", "round": 1, "created": "2026-10-09T00:00:00Z", "general_notes": "",
+                "ledger": {"name": "x.md", "sha256": report.sha256(led), "head": "origin/main", "head_sha": "8c1d2e0",
+                           "base": "upstream/main", "base_sha": "4be19e2", "updated": "2026-10-02 16:40"},
+                "entries": entries}
+        with tempfile.TemporaryDirectory() as d:
+            lp, rp = pathlib.Path(d, "x.md"), pathlib.Path(d, "r.json")
+            lp.write_text(led)
+            rp.write_text(json.dumps(resp))
+            buf = io.StringIO()
+            with contextlib.redirect_stdout(buf):
+                code = report.cmd_check(argparse.Namespace(responses=str(rp), ledger=str(lp)))
+        return code, buf.getvalue()
+
+    def test_reported_when_the_file_picks_the_dependency(self):
+        code, out = self.check(f4_mode="cherry-pick")
+        self.assertIn("STALE CUT F5→F4: F4 is picked; drop the cut", out)
+        self.assertEqual(code, 0)
+
+    def test_reported_when_the_ledger_has_the_dependency_landed(self):
+        code, out = self.check(f4_status="landed: harvest/retries")
+        self.assertIn("STALE CUT F5→F4: F4 is landed; drop the cut", out)
+        self.assertEqual(code, 0)
+
+    def test_not_reported_while_the_dependency_is_unpicked(self):
+        code, out = self.check(f4_mode="left")
+        self.assertNotIn("STALE CUT", out)
+        self.assertNotIn("DEPENDENCY", out)
+        self.assertEqual(code, 0)
 
 
 class Entries(unittest.TestCase):
