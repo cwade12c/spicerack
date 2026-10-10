@@ -24,6 +24,7 @@ extensions/    Editor and harness extensions
 workflows/     Multi-step workflows that combine the pieces above
 config/        Settings snippets and instruction-file fragments
 scripts/       Tools for working on spicerack itself
+tests/         Development-only tests for the items above; never installed
 ```
 
 Each folder's README says what belongs there and how to install it.

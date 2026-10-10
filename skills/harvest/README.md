@@ -101,6 +101,14 @@ Every landing has to pass the same checks:
 - a test that drives the feature through upstream's public surface, fails on upstream (on an assertion, not an import error) and passes on the branch, deterministically;
 - nothing from features you didn't pick.
 
+## Batched review page
+
+On a big ledger, deciding features one chat message at a time is slow. When the agent shows you the ledger, it asks whether you'd rather review on a page: a single offline HTML file it can open in your browser. Go through the entries in dependency order, mark each one cherry-pick, rework, rebuild or leave, name batches, and queue your questions. The page flags any pick whose dependency you left, and shows the branches it would land. When you're done, **Finish round** copies the whole round, and you paste it into the chat with your agent.
+
+The agent checks the round against the ledger, applies your marks, answers every question in one pass, and gives you the next round's page with the answers inline. The ledger stays the record: the page is generated from it and never edits it. Nothing about the page is required. Turn it down and the session stays in chat as before.
+
+In a cloud session, the agent sends you the file to open in your browser. It publishes the page somewhere only if you ask, since the page summarises unreleased work. Verified in current Chromium and Firefox, on desktop and at phone size. Safari and screen readers are untested.
+
 ## Stopping and resuming
 
 The ledger is saved at `.git/harvest/<head>.md`, inside `.git`, so it persists across sessions without touching your working tree. Run `/harvest` again with the same refs and it tells you what it found before doing anything:
@@ -126,7 +134,7 @@ The checker proves the ledger is complete and consistent. Whether commits are gr
 
 ## Requirements
 
-- A coding agent that supports [Agent Skills](https://agentskills.io) and can run shell commands.
+- A coding agent that supports [Agent Skills](https://agentskills.io) and can run shell commands. Harvest has been tested in Claude Code.
 - The skill installed, either way:
   - `npx skills add cwade12c/spicerack --skill harvest`, for any supported agent;
   - or, in Claude Code, `/plugin marketplace add cwade12c/spicerack` and `/plugin install harvest@spicerack`.
@@ -151,4 +159,9 @@ In Claude Code, harvest is user-invoked: it only runs when you type it, and it c
 | [`SKILL.md`](SKILL.md) | The agent: steps 1–4, ledger format, done-checks. |
 | [`references/LANDING.md`](references/LANDING.md) | The agent: the three landing modes and their checks, loaded only at step 4. |
 | [`scripts/ledger_check.py`](scripts/ledger_check.py) | The agent: mechanical checks for set-aside, coverage, and batches. |
+| [`references/REPORT.md`](references/REPORT.md) | The agent: the review page round by round (render, deliver, check, ingest, close), and the responses file format. Loaded only when you ask for the page. |
+| [`scripts/report.py`](scripts/report.py) | The agent: renders the review page from the ledger, and checks a responses file against the ledger before it's applied. |
+| [`assets/report-template.html`](assets/report-template.html) | The review page itself: one offline file with no dependencies, filled in by `report.py`. |
 | `README.md` | You. |
+
+The page's end-to-end tests are in [`tests/harvest/`](../../tests/harvest/) at the repo root. They aren't part of the installed skill.

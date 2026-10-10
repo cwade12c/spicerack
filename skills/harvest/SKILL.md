@@ -4,7 +4,7 @@ description: Reduce a large diff between two diverged refs (a fork and its upstr
 argument-hint: "<base-ref> <head-ref> [fresh], e.g. upstream/main origin/main"
 disable-model-invocation: true
 license: MIT
-compatibility: Requires git and python3 (standard library only), with shell access. Built for Claude Code; runs in any agent that supports Agent Skills.
+compatibility: Requires git and python3 (standard library only), with shell access. Runs in any agent that supports Agent Skills.
 ---
 
 # Harvest
@@ -25,7 +25,7 @@ Set aside work base already has, in three passes:
 2. `python3 <skill-dir>/scripts/ledger_check.py survivors base head` lists every commit that owns no tree-diff line base lacks. Set aside the ones it marks `on-base`. A `superseded` commit was rewritten by head itself: give it to the entry of the commit that rewrote it, found among the later commits the script lists. A `content-free` merge goes in the header's list of content-free merges.
 3. Work rebuilt onto base and merged back into head lands below the merge-base, and often on a merge's second parent, so read every merge on base back past the oldest head commit's date (`git log --merges --format='%h %p %s' --since=<date> base`), and set aside any head work it covers that passes 1 and 2 missed.
 
-Record each set-aside item in the ledger as `landed: already on base`, with its commits and the evidence in base's tree. List base merges that brought head-authored work in below the merge-base as `not in range`, so the human sees they were checked.
+Record each set-aside item in the ledger as an entry `### S<n>. <title>` with `Status: landed: already on base`, its commits, and the evidence in base's tree in its `Notes:`. List base merges that brought head-authored work in below the merge-base as `not in range`, so the human sees they were checked.
 
 The ledger lives at `$(git rev-parse --git-common-dir)/harvest/<head>.md`, with every `/` in the head ref replaced by `-` (`origin/main` → `origin-main.md`): inside `.git`, so it persists across sessions without touching the tree. Its ownership map is the sidecar `<head>.owners.json` beside it, in the format `scripts/ledger_check.py` documents.
 
@@ -42,7 +42,7 @@ Done when you can state base, head, merge-base SHA, commit count, files changed,
 
 Read every commit message, and every hunk under base's source roots that isn't a test. For tests, docs, tools, and generated files, read enough to attribute each to a feature. Group the commits into features by **intent**: what a user or maintainer would say the change is _for_, not which files it touches. A commit that serves two features is split between them in the sidecar by path, or by head line range within a file. A single line serving two entries goes to the one whose commit wrote it; name it in the other entry's `Depends on:` as a line to edit if they land apart. Removed lines are assigned one owner per file, by judgement; landing re-derives them from the picked commits. Changes with no user-facing intent (formatting, dependency bumps, CI, renames) go in a single `Plumbing` entry. Work head rules forbid on base (fork docs and plans, deployment config, the fork's own persona or branding) goes in a single `Head-only` entry, offered only if the human asks; work head merely hasn't proposed yet stays a feature, with the head rule cited in its fit.
 
-Write the ledger to its path from step 1. Its header records base, head, merge-base, the base and head SHAs it was built from, an `Updated:` time rewritten on every save, the content-free merges, and which files were read in full versus only attributed. Then one entry per feature:
+Write the ledger to its path from step 1. Its header records base, head, merge-base, the base and head SHAs it was built from, an `Updated:` time rewritten on every save, the content-free merges, and which files were read in full versus only attributed. Write each header field as one `Key: value` line, with `Base:` and `Head:` as `<ref> @ <sha>` (`Base: upstream/main @ 4be19e2`). A ledger reviewed on the review page also carries `Report: round <N> ingested <date>`. Then one entry per feature:
 
 ```markdown
 ### F3. Retry failed webhook deliveries with backoff
@@ -56,10 +56,14 @@ Why: <head's reason, from commit messages or code comments; "unstated" if none>
 - Depends on: F1 (adds `_retry_delay` to F1's queue)
 - Fit: tension. Adds a background thread; ADR-004 says the worker is single-threaded.
 - Status: open
-- Notes: <optional; dated questions the human asked in step 3, and their answers>
+- Notes:
+  - 2026-10-09 Q: Why a thread and not the job queue? A: <answer, citing file:line>
+  - 2026-10-09 Note: <something the human said worth keeping>
 ```
 
-**Files** gives the count and only the non-test source files; the sidecar holds the full list. **Fit** is one of `aligned`, `tension`, or `conflict`, each with the yardstick line it cites. **Depends on** also names any code this entry adds inside another entry's files, so landing in another order knows to carry it. **Status** starts `open`, becomes `picked: <mode>, batch: <name>` or `left` in step 3, and `landed: <branch>` in step 4.
+**Files** gives the count and only the non-test source files; the sidecar holds the full list. **Fit** starts with `aligned`, `tension`, or `conflict`, followed by the yardstick line it cites. **Depends on** lists entry ids first, each named on its own (`F2, F3, F4`, not `F2-F4`) and optionally followed by its reason in parentheses; it is `none` when there are none. Further prose goes after a `;`. A dependency the human agreed to cut is recorded last on the line as `; cut F4: <how>`, one clause per dependency, with the how on one line and without a `;`; drop the clause once that dependency is picked or landed. It also names any code this entry adds inside another entry's files, so landing in another order knows to carry it. **Status** starts `open`, becomes `picked: <mode>, batch: <name>` or `left` in step 3, and `landed: <branch>` in step 4. **Notes** holds dated sub-bullets, a question with its answer on one `Q:` line; a question asked on the review page keeps its id, as `Q (r1.q2):` or `Note (r1.q3):`.
+
+The `Plumbing` and `Head-only` entries use the same template, headed `### Plumbing. <title>` and `### Head-only. <title>`.
 
 Then run the **coverage check**: `python3 <skill-dir>/scripts/ledger_check.py coverage base head <head>.owners.json`. It confirms every added line is owned by exactly one entry, every commit is owned, set aside, or content-free, every set-aside commit owns only lines base already has, every file's removed lines have one owner, and every claim in the sidecar owns something. The check proves the ownership map is complete and consistent; whether the commits are grouped by the right intent is yours to judge, and the human's to interrogate.
 
@@ -67,9 +71,26 @@ Done when the coverage check exits 0 and every entry has its title, description,
 
 Present the ledger to the human as a table: title, one-line description, fit, and dependencies, ordered by dependency so features come before the ones that build on them, with `Plumbing` and `Head-only` last. The full entries stay in the ledger file.
 
+After the table, ask how the human wants to review, and wait for the answer. `<N>` below is the number of feature entries.
+
+If you have a multiple-choice question tool (`AskUserQuestion` in Claude Code), call it right after the table, in the same turn. Ask "How do you want to review these <N> features?" with two options. The first is **Review page (Recommended)**: "Mark all <N> in your browser, ask questions as you go, and send the round back in one paste." The second is **Chat**: "Question and pick entries here, one at a time."
+
+Only if you have no such tool, end your message with this instead:
+
+```markdown
+### How do you want to review these <N> features?
+
+1. **Review page**: mark all <N> in your browser, ask questions as you go, and send the round back in one paste.
+2. **Chat**: question and pick entries here, one at a time.
+
+Reply 1 or 2.
+```
+
+For the review page, read [references/REPORT.md](references/REPORT.md). For chat, carry on with step 3.
+
 ## 3. Interrogate
 
-The human now drives. They will ask you to elaborate a bullet, show its hunks, defend or question a design choice, compare it with how base would do it, or check it against the yardstick. Answer from the code, citing file and line, and keep head's reasoning separate from your own opinion. Record each question and its answer in the entry's `Notes:`. When an answer changes the picture (a feature splits, a hidden dependency surfaces, ownership was wrong, fit changes) update the entry and sidecar on the spot and re-run the coverage check.
+The human now drives. They will ask you to elaborate a bullet, show its hunks, defend or question a design choice, compare it with how base would do it, or check it against the yardstick. Answer from the code, citing file and line, and keep head's reasoning separate from your own opinion. Record each question and its answer in the entry's `Notes:`. If the human asks to review on a page, or pastes a block starting `Harvest responses, round`, read [references/REPORT.md](references/REPORT.md). When an answer changes the picture (a feature splits, a hidden dependency surfaces, ownership was wrong, fit changes) update the entry and sidecar on the spot and re-run the coverage check.
 
 The human closes this step by marking each picked feature with a **landing mode**:
 
