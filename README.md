@@ -11,6 +11,7 @@ Each item here is a spice: take the one or two you want, not the whole rack. Eve
 | Name | Kind | What it does |
 |---|---|---|
 | [harvest](skills/harvest/) | skill | Turns a huge fork or branch diff into a ledger of features a human can read, question, and pick from, then lands the picks upstream by cherry-pick, rework, or rebuild. |
+| [bluewasabi](skills/bluewasabi/) | skill | Tuning recipes for Bluefin and other Fedora Atomic desktops that leave the image alone. First recipe: end hard freezes when memory runs out. |
 
 ## Layout
 

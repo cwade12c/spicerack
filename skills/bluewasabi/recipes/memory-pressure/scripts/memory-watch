@@ -1,0 +1,89 @@
+#!/usr/bin/env bash
+# Desktop notifications as memory fills up. Runs as a systemd user service
+# (memory-watch.service). Each level notifies once, then re-arms after usage
+# drops back below its reset point.
+#
+#   memory-watch          run the watcher
+#   memory-watch --test   send one sample of each notification and exit
+
+RAM_AVAIL_WARN=${RAM_AVAIL_WARN:-15}   # level 1: MemAvailable below this % of RAM
+SWAP_WARN=${SWAP_WARN:-50}             # level 2: swap used at or above this %
+SWAP_DANGER=${SWAP_DANGER:-80}         # level 3: swap used at or above this %
+INTERVAL=${INTERVAL:-5}                # seconds between checks
+REARM=10                               # points of recovery needed before a level can fire again
+
+read_mem() {
+    local key val _
+    while read -r key val _; do
+        case $key in
+            MemTotal:) mem_total=$val ;;
+            MemAvailable:) mem_avail=$val ;;
+            SwapTotal:) swap_total=$val ;;
+            SwapFree:) swap_free=$val ;;
+        esac
+    done < /proc/meminfo
+    avail_pct=$(( mem_avail * 100 / mem_total ))
+    swap_pct=$(( swap_total > 0 ? (swap_total - swap_free) * 100 / swap_total : 0 ))
+    swap_used_gb=$(( (swap_total - swap_free) / 1048576 ))
+    swap_free_gb=$(( swap_free / 1048576 ))
+    swap_total_gb=$(( swap_total / 1048576 ))
+}
+
+# Biggest memory users, summed per program name (many small processes add up).
+top_users() {
+    # RAM plus swapped-out memory, which is what the kernel's OOM killer weighs.
+    awk '/^Name:/{n=$2} /^VmRSS:|^VmSwap:/{m[n]+=$2} END{for(c in m) printf "%d %s\n", m[c], c}' \
+        /proc/[0-9]*/status 2>/dev/null \
+        | sort -rn | head -4 | awk '{printf "%s %.1fG\n", $2, $1/1048576}' | paste -sd, | sed 's/,/, /g'
+}
+
+# The process Alt+SysRq+F (or the kernel) would kill right now: highest oom_score.
+kill_candidate() {
+    local best=0 pid="" s p name size
+    for p in /proc/[0-9]*; do
+        { read -r s < "$p/oom_score"; } 2>/dev/null || continue
+        (( s > best )) && { best=$s; pid=${p#/proc/}; }
+    done
+    [[ -n $pid ]] || { echo "unknown"; return; }
+    { read -r name < "/proc/$pid/comm"; } 2>/dev/null || name="?"
+    size=$(awk '/^VmRSS:|^VmSwap:/{t+=$2} END{printf "%.1fG", t/1048576}' "/proc/$pid/status" 2>/dev/null)
+    echo "$name (pid $pid, ${size:-?})"
+}
+
+last_id=""
+notify() { # urgency, icon, title, body, [id of notification to replace]
+    echo "notify[$1]: $3 - $4"
+    last_id=$(notify-send -p ${5:+-r "$5"} -a "Memory watch" -u "$1" -i "$2" "$3" "$4") || last_id=""
+}
+
+level1() { notify normal dialog-information "Memory nearly full" \
+    "Only ${avail_pct}% of RAM is available. Idle apps will start moving to swap. Biggest: $(top_users)"; }
+level2() { notify normal dialog-warning "Swap half used" \
+    "${swap_used_gb}G of ${swap_total_gb}G swap in use. Things may feel slower. Biggest: $(top_users)"; }
+level3() { notify critical dialog-error "Memory danger: kill likely soon" \
+    "Swap is ${swap_pct}% full, ${swap_free_gb}G left. Close something now. Next to be killed (by the kernel, or by Alt+SysRq+F): $(kill_candidate). Biggest: $(top_users)"; }
+# Replaces the danger notification in place so its advice never goes stale.
+recovered() { notify normal dialog-information "Memory recovered" \
+    "Swap is back to ${swap_pct}% used. Do not press Alt+SysRq+F now: it would kill $(kill_candidate)." "$1"; }
+
+if [[ ${1:-} == --test ]]; then
+    read_mem; level1; level2; level3; sleep 4; recovered "$last_id"; exit 0
+fi
+
+armed1=1 armed2=1 armed3=1 danger_id=""
+while :; do
+    read_mem
+    if (( armed1 && avail_pct < RAM_AVAIL_WARN )); then level1; armed1=0
+    elif (( avail_pct >= RAM_AVAIL_WARN + REARM )); then armed1=1; fi
+
+    if (( armed2 && swap_pct >= SWAP_WARN && swap_pct < SWAP_DANGER )); then level2; armed2=0
+    elif (( swap_pct < SWAP_WARN - REARM )); then armed2=1; fi
+
+    if (( armed3 && swap_pct >= SWAP_DANGER )); then level3; danger_id=$last_id; armed3=0; armed2=0
+    elif (( swap_pct < SWAP_DANGER - REARM )); then
+        if [[ -n $danger_id ]]; then recovered "$danger_id"; danger_id=""; fi
+        armed3=1
+    fi
+
+    sleep "$INTERVAL"
+done

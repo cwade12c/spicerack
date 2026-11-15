@@ -27,6 +27,28 @@
         "cherry-pick"
       ],
       "category": "git"
+    },
+    {
+      "name": "bluewasabi",
+      "source": "./skills/bluewasabi",
+      "description": "Tuning recipes for Bluefin and other Fedora Atomic desktops that leave the image alone. First recipe: memory-pressure, which ends hard freezes when RAM runs out.",
+      "version": "0.1.0",
+      "author": {
+        "name": "Wade",
+        "url": "https://github.com/cwade12c"
+      },
+      "homepage": "https://github.com/cwade12c/spicerack/tree/main/skills/bluewasabi",
+      "repository": "https://github.com/cwade12c/spicerack",
+      "license": "MIT",
+      "keywords": [
+        "bluefin",
+        "fedora-atomic",
+        "universal-blue",
+        "swap",
+        "zswap",
+        "oom"
+      ],
+      "category": "system"
     }
   ]
 }

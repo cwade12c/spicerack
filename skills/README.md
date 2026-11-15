@@ -7,5 +7,6 @@ Install with `npx skills add cwade12c/spicerack --skill <skill>`, or as a Claude
 | Skill | Invoked by | Summary |
 |---|---|---|
 | [harvest](harvest/) | you, as `/harvest` | Fork or branch diff → feature ledger → pick → land |
+| [bluewasabi](bluewasabi/) | you, as `/bluewasabi` | Tested tuning recipes for Bluefin and other Fedora Atomic desktops |
 
 Skills may also carry Claude Code's frontmatter extensions, such as `disable-model-invocation` and `argument-hint`. Other agents ignore them, but strict validation with [`skills-ref`](https://github.com/agentskills/agentskills/tree/main/skills-ref) reports them as unexpected fields.

@@ -1,0 +1,14 @@
+[Unit]
+Description=Desktop notifications as RAM and swap fill up
+PartOf=graphical-session.target
+After=graphical-session.target
+
+[Service]
+ExecStart=%h/.local/bin/memory-watch
+Restart=on-failure
+RestartSec=10
+# Thresholds can be overridden here, e.g.:
+# Environment=RAM_AVAIL_WARN=15 SWAP_WARN=50 SWAP_DANGER=80
+
+[Install]
+WantedBy=graphical-session.target

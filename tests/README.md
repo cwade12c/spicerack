@@ -14,3 +14,11 @@ uv run --no-project --with playwright python tests/harvest/test_report_page.py -
 ```
 
 The page test needs Playwright's browsers (`playwright install chromium firefox`). It writes the rendered pages, the exported files and screenshots to `harvest/out/<browser>/`, which git ignores. Look at the screenshots after a template change.
+
+## bluewasabi
+
+- `bluewasabi/test_memory_pressure.sh`: lint and syntax for the memory-pressure scripts, and the swapfile sizing rule. It changes nothing and puts no load on the machine. The stress stages in `skills/bluewasabi/recipes/memory-pressure/scripts/stress.sh` are run by hand, on a machine with the recipe applied.
+
+```bash
+bash tests/bluewasabi/test_memory_pressure.sh
+```
